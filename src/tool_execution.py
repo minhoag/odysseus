@@ -708,6 +708,9 @@ async def _direct_fallback(
                         f"ffmpeg, builds, training, ssh ... <long cmd>)."
                     ),
                     "exit_code": 124,
+                    "timed_out": True,
+                    "tool": "bash",
+                    "timeout_sec": DEFAULT_BASH_TIMEOUT,
                     "stdout": _truncate(stdout, MAX_OUTPUT_CHARS),
                     "stderr": _truncate(stderr, MAX_OUTPUT_CHARS),
                 }
@@ -745,6 +748,9 @@ async def _direct_fallback(
                         f"auto-resumed when it finishes)."
                     ),
                     "exit_code": 124,
+                    "timed_out": True,
+                    "tool": "python",
+                    "timeout_sec": DEFAULT_PYTHON_TIMEOUT,
                     "stdout": _truncate(stdout, MAX_OUTPUT_CHARS),
                     "stderr": _truncate(stderr, MAX_OUTPUT_CHARS),
                 }

@@ -9,6 +9,7 @@ The LLM decides when to use tools by writing fenced code blocks.
 import asyncio
 import collections
 import json
+import threading
 import re
 import time
 import logging
@@ -1506,7 +1507,7 @@ def _build_actions_snapshot(tool_events: list, limit: int = 8000) -> str:
 
 
 _SESSION_USER_QUEUES: Dict[str, List[str]] = {}
-_SESSION_QUEUE_LOCK = asyncio.Lock()
+_SESSION_QUEUE_LOCK = threading.Lock()
 
 
 def enqueue_user_message(session_id: str, message: str) -> int:
@@ -1518,8 +1519,14 @@ def enqueue_user_message(session_id: str, message: str) -> int:
     """
     if not session_id or not (message or "").strip():
         return 0
-    q = _SESSION_USER_QUEUES.setdefault(session_id, [])
-    q.append(message.strip())
+    msg = message.strip()
+    # Keep each session queue bounded to avoid unbounded memory growth if a
+    # browser keeps queueing messages while the agent is stuck.
+    with _SESSION_QUEUE_LOCK:
+        q = _SESSION_USER_QUEUES.setdefault(session_id, [])
+        q.append(msg)
+        if len(q) > 16:
+            del q[:-16]
     return len(q)
 
 
@@ -1527,18 +1534,21 @@ def drain_session_queue(session_id: str) -> List[str]:
     """Pop and return every queued user message for this session."""
     if not session_id:
         return []
-    q = _SESSION_USER_QUEUES.pop(session_id, [])
+    with _SESSION_QUEUE_LOCK:
+        q = _SESSION_USER_QUEUES.pop(session_id, [])
     return q
 
 
 def peek_session_queue(session_id: str) -> List[str]:
     """Return (without removing) currently queued messages."""
-    return list(_SESSION_USER_QUEUES.get(session_id, []))
+    with _SESSION_QUEUE_LOCK:
+        return list(_SESSION_USER_QUEUES.get(session_id, []))
 
 
 def clear_session_queue(session_id: str) -> int:
     """Drop all queued messages for a session. Returns how many were cleared."""
-    q = _SESSION_USER_QUEUES.pop(session_id, [])
+    with _SESSION_QUEUE_LOCK:
+        q = _SESSION_USER_QUEUES.pop(session_id, [])
     return len(q)
 
 
@@ -3405,46 +3415,88 @@ async def stream_agent_loop(
         # N == len(tool_blocks)) — earlier rounds' events have already
         # been counted.
         _this_round_events = tool_events[-len(tool_blocks):] if tool_blocks else []
-        _looks_like_error = any(
-            (_ev.get("exit_code") not in (None, 0))
+        _has_timeout = any(
+            _ev.get("timed_out") is True
             for _ev in _this_round_events
             if isinstance(_ev, dict)
         )
-        if _looks_like_error and tool_blocks:
+        _timeout_seconds = next(
+            (
+                int(_ev.get("timeout_sec"))
+                for _ev in _this_round_events
+                if isinstance(_ev, dict) and _ev.get("timeout_sec")
+            ),
+            None,
+        )
+        if _has_timeout and tool_blocks:
             _ftk = "|".join(sorted(
                 f"{b.tool_type}:{(b.content or '').strip()[:120]}"
                 for b in tool_blocks
             ))
-            _failing_tool_sigs[_ftk] = _failing_tool_sigs.get(_ftk, 0) + 1
-            if _failing_tool_sigs[_ftk] >= 3:
-                logger.warning(
-                    f"[agent] failing-tool repetition tripped on round "
-                    f"{round_num}: {_ftk[:80]!r} failed "
-                    f"{_failing_tool_sigs[_ftk]} times; forcing tool-free round"
-                )
-                messages.append({
-                    "role": "system",
-                    "content": (
-                        "Your last tool call has failed with the same error "
-                        f"{_failing_tool_sigs[_ftk]} times. STOP retrying with "
-                        "the same arguments. Either (a) fix the call by "
-                        "reading the error message carefully — usually the "
-                        "fix is supplying a required argument that you "
-                        "omitted — or (b) end the turn explaining what you "
-                        "couldn't do. Do NOT emit another tool call with "
-                        "the same arguments."
-                    ),
-                })
-                _force_answer = True
+            logger.warning(
+                f"[agent] long-running tool timed out on round {round_num}: {_ftk[:80]!r} "
+                f"({_timeout_seconds or 'unknown'}s) — forcing tool-free correction."
+            )
+            messages.append({
+                "role": "system",
+                "content": (
+                    "That tool call hit the execution timeout and was killed. "
+                    "Do NOT retry the same foreground command. If the work is still needed, "
+                    "re-run it in background with a `#!bg` marker on the first line, then "
+                    "finish this turn without another tool call. A self-check is coming later."
+                ),
+            })
+            try:
+                if session_id and owner and not _from_wake:
+                    _schedule_self_wake(session_id, owner, 2, sess_name=None)
+            except Exception:
+                logger.warning(f"[agent] timeout self-wake schedule failed on round {round_num}")
+            _failing_tool_sigs.pop(_ftk, None)
+            _force_answer = True
+            # Timeouts are a hard control-path failure (foreground limit), not
+            # an incorrect tool-call shape. Don't count against generic
+            # repeated-error breaker.
         else:
-            # New sig OR success — clear the counter for the sig we just ran
-            # so a previously-failing call that now works doesn't keep tripping.
-            if tool_blocks:
-                _ftk_now = "|".join(sorted(
+            _looks_like_error = any(
+                (_ev.get("exit_code") not in (None, 0))
+                for _ev in _this_round_events
+                if isinstance(_ev, dict)
+            )
+            if _looks_like_error and tool_blocks:
+                _ftk = "|".join(sorted(
                     f"{b.tool_type}:{(b.content or '').strip()[:120]}"
                     for b in tool_blocks
                 ))
-                _failing_tool_sigs.pop(_ftk_now, None)
+                _failing_tool_sigs[_ftk] = _failing_tool_sigs.get(_ftk, 0) + 1
+                if _failing_tool_sigs[_ftk] >= 3:
+                    logger.warning(
+                        f"[agent] failing-tool repetition tripped on round "
+                        f"{round_num}: {_ftk[:80]!r} failed "
+                        f"{_failing_tool_sigs[_ftk]} times; forcing tool-free round"
+                    )
+                    messages.append({
+                        "role": "system",
+                        "content": (
+                            "Your last tool call has failed with the same error "
+                            f"{_failing_tool_sigs[_ftk]} times. STOP retrying with "
+                            "the same arguments. Either (a) fix the call by "
+                            "reading the error message carefully — usually the "
+                            "fix is supplying a required argument that you "
+                            "omitted — or (b) end the turn explaining what you "
+                            "couldn't do. Do NOT emit another tool call with "
+                            "the same arguments."
+                        ),
+                    })
+                    _force_answer = True
+            else:
+                # New sig OR success — clear the counter for the sig we just ran
+                # so a previously-failing call that now works doesn't keep tripping.
+                if tool_blocks:
+                    _ftk_now = "|".join(sorted(
+                        f"{b.tool_type}:{(b.content or '').strip()[:120]}"
+                        for b in tool_blocks
+                    ))
+                    _failing_tool_sigs.pop(_ftk_now, None)
 
         # If budget was hit, stop the loop
         if budget_hit:
