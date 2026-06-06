@@ -178,10 +178,11 @@ TOOL_SECTIONS = {
 ```
 Run any shell command. Output is returned to you. Use for: installing packages, checking files, git, curl, system info, etc.
 NEVER use bash to create or change files — no `>`/`>>` redirects, no heredocs (`cat > f << 'EOF'`), no `tee`, `sed -i`, `awk -i`, no `python -c` that writes. To CREATE or fully rewrite a file use `write_file`; to change part of an existing file use `edit_file`. Those show a diff and are the ONLY allowed way to write files. (bash is for read-only inspection: `ls`, `cat` to READ, `grep`, `git status`/`git diff`, builds, installs.)
-For LONG-running commands (package installs, pip/npm, ffmpeg, model downloads, training, builds — anything that may take more than ~20s), make the FIRST line `#!bg` to run it in the BACKGROUND. You get a job id back immediately and are automatically re-invoked with the full output when it finishes — so you never block the chat waiting. Example:
+NEVER chain `sleep N && curl ...` inline. Sleep blocks the whole chat — the user sees "Thinking" for N seconds with no progress. To wait for a server to come up, end the current turn after launching it; the next turn (or a self-wake) will check status. If you absolutely must poll inside one turn, use `#!bg` so it runs in the background.
+For LONG-running commands (anything that may take more than ~20s), the FIRST line MUST be `#!bg`. You get a job id back immediately and are automatically re-invoked with the full output when it finishes — so you never block the chat waiting. ALWAYS use `#!bg` for: `pip install`, `npm install`, `apt`, `pacman`, `brew`, `ollama pull`, `ollama run`, `hf download`, `huggingface-cli download`, `aria2c`, `wget` / `curl` of large files, `ffmpeg`, `make`, builds, training jobs, model serves (`vllm serve`, `ollama serve`), `ssh ... <any of the above>` — and ANY ssh command you don't already know will return in seconds. If you forget `#!bg` on a long command, the user's chat will appear to freeze. Example:
 ```bash
 #!bg
-pip install openai-whisper
+ssh pewds@192.168.1.12 "OLLAMA_HOST=0.0.0.0:8000 ollama pull qwen2.5:0.5b"
 ```
 SANDBOX LIMITS: stdin/stdout are pipes, so there is NO interactive terminal — `input()`, `curses`, `termios`, `pygame`, and `tkinter` will all fail. Don't try to RUN interactive terminal games or GUI apps here — verify syntax (`python -c "import py_compile; py_compile.compile('x.py')"`) and tell the user to run it themselves in their own terminal. For anything the USER should play/use interactively (games, UIs, demos), prefer a single self-contained HTML file with `<canvas>` + inline JS — save it via `create_document` with language="html" and tell the user to hit the Run / Preview button (▶) in the document editor toolbar; it renders inline in a sandboxed iframe so the game is playable right there. Works from any machine that can reach the Odysseus UI — no need to copy files out.
 NEVER pipe multi-line Python through `python -c "..."` — shell quoting eats real newlines and `\\n` arrives as literal backslash-n, which Python parses as a line-continuation error on line 1. To run multi-line code, either use the dedicated `python` tool block above, or save to a file first with a quoted HEREDOC (`cat > /tmp/x.py << 'EOF' ... EOF`) and then `python /tmp/x.py`.""",
@@ -1279,6 +1280,213 @@ _VERIFIER_EFFECTFUL_TOOLS = {
 _VERIFIER_MAX_ROUNDS = 2  # cap re-verify cycles per turn — never loop forever
 
 
+# ── Request-mode classifier (task vs chat) ───────────────────────────────
+# Two-stage cheap classifier that gates the supervisor mechanisms.
+#
+#   chat  → just answer; no stream-break nudges, no intent-nudges, no
+#           verifier ladder, no self-wake. Safety nets (loop-breaker,
+#           poll-backstop, runaways, watchdogs) still run.
+#   task  → full supervisor pile (when `agent_supervisor_ladder` is on).
+#
+# Stage 1: pure regex (microseconds). Catches >90% of messages.
+# Stage 2: one-token LLM decision via the configured `task_model`. Only
+#          runs when stage 1 returns "ambiguous", caches per turn, and
+#          falls back to "chat" if the task_model isn't configured or
+#          errors. Bias-to-chat throughout — false-task is the bug we're
+#          eliminating; false-chat just means the user re-prompts.
+_PURE_CHAT_ONLY_RE = re.compile(
+    r"^\s*(?:"
+    r"hi|hello|hey|yo|sup|hola|gm|good\s+(?:morning|afternoon|evening)|howdy|"
+    r"thanks?|thank\s+you|ty|thx|"
+    r"ok|okay|sure|fine|cool|nice|alright|got\s+it|gotcha|right|"
+    r"wow|lol|haha|amazing|awesome|"
+    r"yes|no|maybe|nope|yep|yeah|nah"
+    r")[\s!.?,]*$",
+    re.IGNORECASE,
+)
+_CHAT_QUESTION_RE = re.compile(
+    r"\b(?:who\s+are\s+you|what\s+can\s+you\s+do|what\s+are\s+you|"
+    r"tell\s+me\s+about\s+yourself|what'?s\s+your\s+name|"
+    r"are\s+you\s+(?:human|an?\s+ai|sentient|conscious|alive|real)|"
+    r"what\s+do\s+you\s+think|what'?s\s+your\s+opinion|"
+    r"what\s+would\s+you\s+do|how\s+do\s+you\s+feel)\b",
+    re.IGNORECASE,
+)
+_GREETING_PREFIX_RE = re.compile(
+    r"^\s*(?:hi|hello|hey|yo|sup|hola|gm|good\s+(?:morning|afternoon|evening)|"
+    r"howdy|thanks?|thank\s+you|ty|thx|"
+    r"ok|okay|sure|fine|cool|nice|alright|"
+    r"wow|lol|haha|amazing|awesome|nice)"
+    r"[\s,!.?-]+",
+    re.IGNORECASE,
+)
+_TASK_VERB_RE = re.compile(
+    r"\b(?:please\s+)?(?:can|could|would|will|should)?\s*(?:you\s+)?"
+    r"(?:help\s+me\s+)?(?:let'?s\s+)?"
+    r"(?:install|launch|serve|run|start|stop|kill|build|deploy|fix|find|"
+    r"check|list|show|search|download|tail|grep|setup|configure|update|"
+    r"create|edit|write|delete|remove|cancel|abort|restart|reboot|debug|"
+    r"trace|test|verify|generate|make|implement|add|change|move|rename|"
+    r"copy|migrate|pull|push|commit|merge|investigate|reproduce|profile|"
+    r"benchmark|compile|train|finetune|tune|provision|read|fetch|inspect|"
+    r"diagnose|examine|capture|grab|view|query|ping|adopt|register|hit|"
+    r"send|post|email|reply|upload|sync|clone)\b",
+    re.IGNORECASE,
+)
+
+
+def _classify_request_regex(text: str) -> str:
+    """Stage-1 regex classifier. Returns 'task', 'chat', or 'ambiguous'.
+
+    Order matters: explicit chat shapes first (pure ack / "who are you"), then
+    strip greeting prefix and look for a task verb. The strip lets "Hi, can
+    you install foo" reach the task-verb scan after "Hi, " is removed.
+    """
+    if not text or not text.strip():
+        return "chat"
+    if _PURE_CHAT_ONLY_RE.match(text):
+        return "chat"
+    if _CHAT_QUESTION_RE.search(text):
+        return "chat"
+    stripped = _GREETING_PREFIX_RE.sub("", text.strip(), count=1)
+    if _TASK_VERB_RE.search(stripped):
+        return "task"
+    return "ambiguous"
+
+
+async def _classify_request_llm(
+    text: str,
+    endpoint_url: str,
+    model: str,
+    headers: Optional[Dict] = None,
+) -> str:
+    """Stage-2 LLM classifier — single-token decision via task_model.
+
+    Falls back to 'chat' on any error or non-recognized output. ONE token,
+    8-second hard timeout, temperature 0 — bounded latency + cost.
+    """
+    from src.llm_core import llm_call_async
+    prompt = (
+        "Classify the user message as `task` or `chat`. Answer ONE WORD.\n\n"
+        "- task: user is asking you to DO something — run a command, fix code, "
+        "find a file, install/launch/serve software, edit files, look something up, "
+        "manage notes/calendar/email/files.\n"
+        "- chat: user is having a conversation — greeting, thanks, reacting, "
+        "sharing opinion, asking what you can do, social pleasantry, ambiguous "
+        "exploratory question.\n\n"
+        f"USER MESSAGE: {text[:800]}\n\n"
+        "ANSWER (one word, task or chat):"
+    )
+    try:
+        raw = await asyncio.wait_for(
+            llm_call_async(
+                endpoint_url=endpoint_url,
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                headers=headers or {},
+                temperature=0.0,
+                max_tokens=4,
+            ),
+            timeout=8.0,
+        )
+        out = (raw or "").strip().lower()
+        return "task" if out.startswith("task") else "chat"
+    except Exception as e:
+        logger.warning(f"[classifier] LLM stage failed ({e!r}); defaulting to chat")
+        return "chat"
+
+
+async def _classify_request_mode(text: str) -> str:
+    """Combined two-stage classifier. Returns 'task' or 'chat'.
+
+    Stage 1 = regex; Stage 2 = task_model LLM (only on 'ambiguous'). Cached
+    per turn by the caller; called at most once per agent_loop invocation.
+    """
+    s1 = _classify_request_regex(text)
+    if s1 != "ambiguous":
+        return s1
+    task_model_spec = (get_setting("task_model", "") or "").strip()
+    if not task_model_spec:
+        return "chat"
+    try:
+        from src.endpoint_resolver import resolve_endpoint
+        ep_url, ep_model, ep_headers = resolve_endpoint("task")
+        if not ep_url or not ep_model:
+            return "chat"
+        return await _classify_request_llm(text, ep_url, ep_model, ep_headers)
+    except Exception as e:
+        logger.warning(f"[classifier] resolve_endpoint failed ({e!r}); defaulting to chat")
+        return "chat"
+
+def _format_bg_jobs_status(session_id: Optional[str]) -> str:
+    """Compact summary of this session's background jobs for per-turn injection.
+
+    Most production agent frameworks (Devin, Claude Code) keep outstanding
+    background work visible in the model's context so it doesn't forget a
+    `#!bg` install / download mid-conversation. Odysseus already runs the
+    jobs and auto-resumes the agent on completion; this just makes the
+    handle *visible* every turn so the model can reference / poll / kill
+    intelligently instead of re-launching duplicates.
+
+    Returns "" when nothing's outstanding so the caller skips the inject.
+    """
+    if not session_id:
+        return ""
+    try:
+        from src import bg_jobs
+        jobs = bg_jobs.list_for_session(session_id) or []
+    except Exception:
+        return ""
+    if not jobs:
+        return ""
+    now = time.time()
+    parts = []
+    for rec in jobs:
+        if not isinstance(rec, dict):
+            continue
+        jid = rec.get("id") or rec.get("job_id") or "?"
+        cmd_line = (rec.get("command") or "").strip().splitlines()
+        cmd_preview = (cmd_line[0] if cmd_line else "").strip()[:60]
+        if len(cmd_preview) >= 60:
+            cmd_preview = cmd_preview.rstrip() + "…"
+        status = (rec.get("status") or "?").lower()
+        if status == "running":
+            started = rec.get("started_at") or rec.get("ts") or now
+            try:
+                dt = int(now - float(started))
+            except (TypeError, ValueError):
+                dt = 0
+            human = f"{dt//60}m{dt%60:02d}s" if dt >= 60 else f"{dt}s"
+            parts.append(f"`{jid}` `{cmd_preview}` running {human}")
+        elif status in {"done", "completed"}:
+            ec = rec.get("exit_code", "?")
+            parts.append(f"`{jid}` `{cmd_preview}` finished (exit {ec})")
+        elif status in {"failed", "error", "timed_out", "killed"}:
+            parts.append(f"`{jid}` `{cmd_preview}` {status}")
+        else:
+            parts.append(f"`{jid}` `{cmd_preview}` {status}")
+    # Keep this short — it lands in the context EVERY round.
+    if len(parts) > 8:
+        parts = parts[:8] + [f"…and {len(parts) - 8} more"]
+    return (
+        "Background jobs (#!bg) you launched in this session — "
+        "you'll be auto-resumed when running ones finish, but you can also "
+        "reference them by id (e.g. to summarize results, kill, or relaunch):\n- "
+        + "\n- ".join(parts)
+    )
+
+
+# ── Supervisor ladder (mechanism 4) ──
+# When the verifier cap is hit and the turn is still failing, the supervisor
+# climbs a bounded ladder of recovery rungs (different method → teacher →
+# stop+summary) so the agent doesn't silently quit with the work half-done.
+# Each rung emits a `supervisor_step` SSE event so the user can see the
+# escalation in the chat thread (visible, not hidden). Single shot per rung
+# per turn-sequence — never loops forever.
+_SUPERVISOR_DIFFERENT_METHOD_MAX = 1  # one shot at "try a fundamentally different approach"
+_SUPERVISOR_TEACHER_MAX = 1           # one shot at calling the teacher model
+
+
 def _build_actions_snapshot(tool_events: list, limit: int = 8000) -> str:
     """Compact record of what the agent actually did this turn, for the
     verifier to judge against. One block per tool execution: the command and
@@ -1297,6 +1505,136 @@ def _build_actions_snapshot(tool_events: list, limit: int = 8000) -> str:
     return snap[:limit] if len(snap) > limit else snap
 
 
+_SESSION_USER_QUEUES: Dict[str, List[str]] = {}
+_SESSION_QUEUE_LOCK = asyncio.Lock()
+
+
+def enqueue_user_message(session_id: str, message: str) -> int:
+    """Queue a user message to be injected at the next agent round boundary.
+
+    Called by POST /api/sessions/{session_id}/queue. Returns the new queue
+    depth after insertion. The agent loop drains this queue between rounds
+    so the user can keep typing while a multi-step tool chain runs.
+    """
+    if not session_id or not (message or "").strip():
+        return 0
+    q = _SESSION_USER_QUEUES.setdefault(session_id, [])
+    q.append(message.strip())
+    return len(q)
+
+
+def drain_session_queue(session_id: str) -> List[str]:
+    """Pop and return every queued user message for this session."""
+    if not session_id:
+        return []
+    q = _SESSION_USER_QUEUES.pop(session_id, [])
+    return q
+
+
+def peek_session_queue(session_id: str) -> List[str]:
+    """Return (without removing) currently queued messages."""
+    return list(_SESSION_USER_QUEUES.get(session_id, []))
+
+
+def clear_session_queue(session_id: str) -> int:
+    """Drop all queued messages for a session. Returns how many were cleared."""
+    q = _SESSION_USER_QUEUES.pop(session_id, [])
+    return len(q)
+
+
+_ETA_RE_LIST = [
+    # "31 minutes remaining" / "in 31 minutes" / "31 min" / "31m"
+    re.compile(r"\b(?:in\s+|after\s+|wait\s+|takes?\s+(?:about\s+|approximately\s+|~)?|remaining[:\s]+|~)?(\d{1,3})\s*(?:minutes?|mins?|m)\b", re.IGNORECASE),
+    # "1 hour" / "2 hours" / "1h" — convert to minutes
+    re.compile(r"\b(?:in\s+|after\s+|takes?\s+(?:about\s+|approximately\s+|~)?|~)?(\d{1,2})\s*(?:hours?|hrs?|h)\b", re.IGNORECASE),
+    # "30 seconds" / "30s" — round up to 1 min minimum
+    re.compile(r"\b(?:in\s+|after\s+|~)?(\d{1,3})\s*(?:seconds?|secs?|s)\b", re.IGNORECASE),
+]
+
+
+def _parse_eta_minutes(text: str) -> Optional[int]:
+    """Extract an ETA from agent text and return it as minutes.
+
+    Used by the self-wake supervisor: when the agent ends a turn saying
+    "31 minutes remaining" or "in about 5 min" without finishing, we
+    schedule a re-entry at the stated time. Returns None if nothing
+    parseable is found; otherwise an int >= 1.
+    """
+    if not text:
+        return None
+    # Order matters: minutes pattern first (most specific), then hours, then seconds.
+    for idx, _re in enumerate(_ETA_RE_LIST):
+        m = _re.search(text)
+        if not m:
+            continue
+        try:
+            n = int(m.group(1))
+        except (ValueError, IndexError):
+            continue
+        if n <= 0:
+            continue
+        if idx == 0:   # minutes
+            return n
+        if idx == 1:   # hours
+            return n * 60
+        if idx == 2:   # seconds — round up
+            return max(1, (n + 59) // 60)
+    return None
+
+
+def _schedule_self_wake(session_id: str, owner: str, minutes: int, sess_name: Optional[str] = None) -> None:
+    """Create a one-off ScheduledTask that pings the session at +minutes.
+
+    The task's `action_ping_chat_session` builtin re-enters the agent loop
+    headlessly with the configured prompt, persisting the response to the
+    session so the user sees it next time they open the chat. Skipped
+    silently if a wake for this session is already pending — we don't want
+    a stack of wakes for one chat.
+    """
+    from datetime import datetime, timedelta, timezone
+    from core.database import SessionLocal, ScheduledTask
+    import uuid as _uuid
+    when = datetime.now(timezone.utc) + timedelta(minutes=int(minutes))
+    when_naive = when.replace(tzinfo=None)
+    db = SessionLocal()
+    try:
+        # Dedup: skip if an active wake already exists for this session.
+        existing = (
+            db.query(ScheduledTask)
+            .filter(
+                ScheduledTask.action == "ping_chat_session",
+                ScheduledTask.session_id == session_id,
+                ScheduledTask.status == "active",
+            )
+            .first()
+        )
+        if existing:
+            logger.info(f"[agent] self-wake: skipping, already-pending task {existing.id}")
+            return
+        task = ScheduledTask(
+            id=_uuid.uuid4().hex[:12],
+            owner=owner,
+            name=f"Self-check: {sess_name or session_id}",
+            task_type="action",
+            action="ping_chat_session",
+            schedule="once",
+            scheduled_date=when_naive,
+            trigger_type="schedule",
+            status="active",
+            session_id=session_id,
+            prompt="",   # uses action default
+            next_run=when_naive,
+        )
+        db.add(task)
+        db.commit()
+        logger.info(
+            f"[agent] self-wake: scheduled {task.id} for session {session_id} "
+            f"in {minutes} min"
+        )
+    finally:
+        db.close()
+
+
 async def _run_verifier_subagent(
     instruction: str, actions_snapshot: str,
     *, endpoint_url: str, model: str, headers: dict,
@@ -1312,15 +1650,26 @@ async def _run_verifier_subagent(
     prompt = (
         "You are an independent verifier. Another assistant just claimed the "
         "following task is complete. Using ONLY the request and the record of "
-        "what it actually did, decide whether that claim is correct. Be strict: "
-        "only say SUCCESS if the work genuinely satisfies the request.\n\n"
+        "what it actually did, decide whether that claim is correct.\n\n"
+        "DEFAULT TO FAIL. The bar is HIGH: only say SUCCESS if every single "
+        "verb in the user request has a corresponding completed action in "
+        "the record. If the request has a conjunction (\"X AND Y\", \"do X "
+        "then Y\"), BOTH must be done; doing only one is a FAIL.\n\n"
         f"<user_request>\n{(instruction or '')[:4000]}\n</user_request>\n\n"
         f"<actions_taken>\n{actions_snapshot[:8000]}\n</actions_taken>\n\n"
         "<checklist>\n"
-        "1. Every concrete deliverable the request asked for was actually produced\n"
-        "2. Outputs/edits match what was asked — nothing missing, no extra or unrequested changes\n"
-        "3. Tool results show success, not errors or empty output that got ignored\n"
-        "4. Anything the request said to leave alone was left unchanged\n"
+        "1. Enumerate every verb/deliverable in the request as a list. Then "
+        "check each one against the actions taken. A missing item = FAIL.\n"
+        "2. \"Download\" is NOT \"download and serve\" — verify each verb.\n"
+        "3. Started ≠ finished. A download that's 0% progress is INITIATED, "
+        "not COMPLETED. Background work that the assistant says \"will\" "
+        "happen later but hasn't yet is INCOMPLETE.\n"
+        "4. The assistant asking the user a question (\"would you like me "
+        "to...\") instead of doing the next step is a FAIL — the user "
+        "already said what they want.\n"
+        "5. Tool results show success, not errors or empty output that got "
+        "ignored.\n"
+        "6. Anything the request said to leave alone was left unchanged.\n"
         "</checklist>\n\n"
         "Reason briefly (2-3 sentences max). Then output EXACTLY one of:\n"
         "  VERIFICATION: SUCCESS\n"
@@ -1366,8 +1715,26 @@ def _empty_response_fallback(
     if full_response.strip() or tool_events:
         return full_response, None
     if round_reasoning.strip():
-        return round_reasoning, None
-    _error_msg = "The model returned an empty response. Please try again or switch to a different model."
+        # Thinking model emitted reasoning but content was empty. Most
+        # commonly this is the max_tokens budget being eaten by the
+        # thinking phase, never reaching the visible answer. Show the
+        # user what happened explicitly instead of the generic "empty
+        # response" message that hides the actual cause.
+        _hint = (
+            f"\n\n_Model produced {len(round_reasoning)} thinking chars "
+            "but no visible answer — its `max_tokens` budget ran out "
+            "during the thinking phase. Try increasing max tokens in "
+            "chat settings, simplify the prompt, or pick a non-thinking "
+            "model._"
+        )
+        return round_reasoning + _hint, f'data: {json.dumps({"delta": _hint})}\n\n'
+    _error_msg = (
+        "The model returned an empty response — no content AND no thinking "
+        "tokens. Likely causes: (1) max_tokens budget hit before the model "
+        "wrote anything, (2) the served model crashed or is still loading, "
+        "(3) wrong chat template for this model. Check `list_served_models` "
+        "for status, or try again with a higher max_tokens."
+    )
     return _error_msg, f'data: {json.dumps({"delta": _error_msg})}\n\n'
 
 
@@ -1390,6 +1757,7 @@ async def stream_agent_loop(
     fallbacks: Optional[List[tuple]] = None,
     workspace: Optional[str] = None,
     _is_teacher_run: bool = False,
+    _from_wake: bool = False,
 ) -> AsyncGenerator[str, None]:
     """Streaming agent loop generator.
 
@@ -1643,6 +2011,30 @@ async def stream_agent_loop(
     _effectful_used = False
     _verifier_rounds = 0
     _verifier_instruction = _extract_last_user_message(messages)
+    # Request-mode classification. Runs once per turn (start of
+    # stream_agent_loop). Default `chat` so supervisor stays silent when the
+    # classifier hasn't run yet (e.g. setting off, or empty user message).
+    # The master `agent_supervisor_ladder` setting decides whether we even
+    # bother classifying — when off, every turn behaves as chat and the
+    # supervisor pile stays dormant.
+    _supervisor_master = bool(get_setting("agent_supervisor_ladder", False))
+    _task_mode = False
+    if _supervisor_master:
+        try:
+            _classified = await _classify_request_mode(_verifier_instruction or "")
+            _task_mode = (_classified == "task")
+            logger.info(
+                f"[classifier] mode={_classified} (master=on, msg={(_verifier_instruction or '')[:80]!r})"
+            )
+        except Exception as _ce:
+            logger.warning(f"[classifier] classify failed ({_ce!r}); defaulting to chat")
+            _task_mode = False
+    # Supervisor ladder state (mechanism 4). Each rung fires at most once per
+    # turn-sequence. Gated by the `agent_supervisor_ladder` setting; without
+    # it the loop falls through to the existing break-on-no-tools behavior.
+    _supervisor_diff_method_tried = 0
+    _supervisor_teacher_tried = 0
+    _supervisor_stop_summary_issued = False
     real_input_tokens = 0   # Accumulated real usage from API
     real_output_tokens = 0
     last_round_input_tokens = 0  # Last round's input tokens (for context % peak)
@@ -1657,14 +2049,15 @@ async def stream_agent_loop(
     # signatures + consecutive no-text tool rounds to bail early.
     _recent_call_sigs = collections.deque(maxlen=6)
     _stuck_rounds = 0
-    _tool_type_counts: collections.Counter = collections.Counter()
+    # (Per-tool-type runaway counter removed — punished good models doing
+    # legitimate multi-step exploration. See loop-breaker block below.)
     _THINK_RE = re.compile(r'<think>.*?</think>', re.DOTALL | re.IGNORECASE)
     _force_answer = False  # set by loop-breaker → next round runs with NO tools
     # Supervisor: how many times we've nudged the model after it announced
     # an action without emitting the tool call. Capped to prevent a model
     # that *can't* call the tool from looping forever.
     _intent_nudge_count = 0
-    _MAX_INTENT_NUDGES = 2
+    _MAX_INTENT_NUDGES = 3
 
     # "I said I would, then didn't" detector. The pattern that breaks debug
     # loops on weak models (deepseek-v4-flash mid-2026): the model writes
@@ -1674,11 +2067,20 @@ async def stream_agent_loop(
     # tool, so we don't nudge on harmless transitional text like "let me
     # know what you think".
     _INTENT_RE = re.compile(
-        r"(?:^|\n)\s*(?:let me|i'?ll|i will|going to|let's)\s+"
+        r"(?:^|\n)\s*(?:let me|i'?ll|i will|going to|let's|first[, ]*i)\s+"
         r"(?:tail|check|investigate|look at|see|tail|read|fetch|inspect|"
         r"verify|diagnose|examine|debug|capture|grab|pull|view|run|call|"
         r"trigger|launch|start|kick off|stop|kill|restart|adopt|serve|"
-        r"register|adopt|list|search|find|query|hit|ping|test)"
+        r"register|adopt|list|search|find|query|hit|ping|test|"
+        # Action verbs the cookbook + file-edit flows use. Without these,
+        # "Let me download the model first" / "I'll create the file" /
+        # "I'll install pandas" parses as harmless transitional text and
+        # the intent-without-action nudge never fires — the turn just
+        # dies after the announcement.
+        r"download|install|build|deploy|configure|setup|create|"
+        r"edit|write|save|update|modify|delete|remove|cancel|kill|"
+        r"send|post|email|reply|push|commit|merge|rebase|clone|"
+        r"upload|copy|move|rename|sync|migrate)"
         r"\b[^.\n]{0,140}",
         re.IGNORECASE,
     )
@@ -1692,6 +2094,23 @@ async def stream_agent_loop(
     # using tools — i.e. it was cut off, not finished. Drives a "Continue" event
     # so the user can resume instead of the turn silently stalling.
     _exhausted_rounds = False
+
+    # Tool-error repetition tracker. Sig = tool_type + args; value = how many
+    # consecutive rounds it has been called with a result that LOOKS like an
+    # error. After 3 identical failing calls in a row we trip the loop
+    # breaker even if the model wrote text between attempts — the existing
+    # _stuck_rounds check needs empty _real_text, which misses the common
+    # weak-model failure mode of "fail, ramble, fail again, ramble, fail".
+    _failing_tool_sigs: dict[str, int] = {}
+
+    # Char-runaway tracker for the streaming layer. Weak models occasionally
+    # degenerate into emitting the same character thousands of times (e.g.
+    # "rrrrrr…" after a parse error). The chat freezes and burns tokens
+    # until max_rounds. We watch the tail of the response buffer for a long
+    # stretch of one repeated non-whitespace char and abort the stream when
+    # we see it.
+    _CHAR_RUNAWAY_WINDOW = 240
+    _CHAR_RUNAWAY_LIMIT = 200
 
     for round_num in range(1, max_rounds + 1):
         round_response = ""
@@ -1746,6 +2165,27 @@ async def stream_agent_loop(
             all_tool_schemas = mcp_schemas if (_wants_mcp and mcp_schemas) else []
         agent_stream_timeout = int(get_setting("agent_stream_timeout_seconds", 300) or 300)
 
+        # Apply context-budget-aware schema slimming for small-context models.
+        # PR #1154 (youmemonk/feat/agent-slim-prompts) — cuts per-tool cost
+        # from ~80-200 tokens to ~15-30 tokens for ≤16k models, drops schemas
+        # entirely for ≤8k models. Big wins on CPU-served local models
+        # where prompt processing is the dominant cost. `context_length` is
+        # the agent-loop parameter already plumbed through from chat_routes.
+        try:
+            from src.prompt_budget import apply_slim_schemas
+            if all_tool_schemas and context_length:
+                _before = len(all_tool_schemas)
+                all_tool_schemas = apply_slim_schemas(all_tool_schemas, context_length)
+                _after = len(all_tool_schemas)
+                if _after != _before or context_length <= 16000:
+                    logger.info(
+                        f"[prompt-budget] ctx={context_length} "
+                        f"schemas {_before} -> {_after} "
+                        f"({'dropped' if _after == 0 else 'slimmed' if _after == _before else 'mixed'})"
+                    )
+        except Exception as _pbe:
+            logger.warning(f"[prompt-budget] slim failed: {_pbe!r}")
+
         _tool_names_sent = [t.get("function", {}).get("name") for t in (all_tool_schemas or []) if t.get("function")]
         logger.info(f"[agent-debug] round={round_num} model={model} _is_api_model={_is_api_model} tools_sent={len(_tool_names_sent)} tool_names={_tool_names_sent[:15]} relevant_tools={sorted(_relevant_tools)[:15] if _relevant_tools else 'ALL'}")
 
@@ -1758,15 +2198,52 @@ async def stream_agent_loop(
         # complementary cap for the rare stream that trickles bytes forever and
         # so never trips the inactivity timeout. Generous — only catches runaway.
         _round_deadline = time.time() + max(agent_stream_timeout * 4, 1200)
-        async for chunk in stream_llm_with_fallback(
+        # Inject a fresh per-round bg-jobs status so the model always sees its
+        # outstanding `#!bg` work. NOT persisted into `messages` — it's a
+        # liveness snapshot, valid for THIS round only. (If we appended, an
+        # hours-old "running 5s" line would pollute later rounds.)
+        _bg_status = _format_bg_jobs_status(session_id)
+        _round_messages = (
+            messages if not _bg_status
+            else messages + [{"role": "system", "content": _bg_status}]
+        )
+        # Token-idle watchdog. The LLM client has an HTTP-level read timeout,
+        # but a model emitting one token per minute keeps the connection
+        # warm — the user just sees "Thinking..." for ten minutes. Wrap
+        # the chunk iterator in an idle-timeout that ends the stream when
+        # no chunk arrives for `agent_stream_idle_seconds` (default 30s).
+        # Stream-end then triggers the supervisor verifier, which gives the
+        # model exactly one chance to declare done or admit it's stuck.
+        _stream_idle_s = int(get_setting("agent_stream_idle_seconds", 30) or 30)
+        _stream_it = stream_llm_with_fallback(
             _candidates,
-            messages,
+            _round_messages,
             temperature=temperature,
             max_tokens=max_tokens,
             prompt_type=prompt_type if round_num == 1 else None,
             tools=all_tool_schemas if all_tool_schemas else None,
             timeout=agent_stream_timeout,
-        ):
+        ).__aiter__()
+        _idle_tripped = False
+        while True:
+            try:
+                chunk = await asyncio.wait_for(_stream_it.__anext__(), timeout=_stream_idle_s)
+            except StopAsyncIteration:
+                break
+            except asyncio.TimeoutError:
+                _idle_tripped = True
+                logger.warning(
+                    f"[agent] stream idle >{_stream_idle_s}s on round {round_num}; "
+                    "ending stream so the supervisor can nudge"
+                )
+                yield (
+                    f'data: {json.dumps({"type": "agent_notice", "message": f"Model paused for {_stream_idle_s}s with no tokens — ending stream and asking the supervisor to nudge."})}\n\n'
+                )
+                try:
+                    await _stream_it.aclose()
+                except Exception:
+                    pass
+                break
             if time.time() > _round_deadline:
                 logger.warning(f"[agent] round {round_num} stream exceeded wall-clock deadline; cutting off")
                 break
@@ -1850,10 +2327,58 @@ async def stream_agent_loop(
                         # round_response unchanged.
                         if data.get("thinking"):
                             round_reasoning += data["delta"]
+                            # Thinking-runaway guard. The earlier idle-stream
+                            # timeout doesn't help here: thinking tokens DO
+                            # arrive (so chunks keep coming), but they're
+                            # all hidden reasoning with no tool call / real
+                            # text. UI just shows "Thinking ▁▂▃" forever.
+                            # Cap reasoning at ~16k chars per round; if it
+                            # exceeds, end the stream so the supervisor can
+                            # nudge the model to actually act.
+                            if len(round_reasoning) >= 16000:
+                                logger.warning(
+                                    f"[agent] thinking-runaway tripped on "
+                                    f"round {round_num}: "
+                                    f"{len(round_reasoning)} reasoning chars "
+                                    "with no tool call yet; ending stream"
+                                )
+                                yield (
+                                    f'data: {json.dumps({"type": "agent_notice", "message": "Model has been thinking too long without acting — ending stream and asking the supervisor to nudge."})}\n\n'
+                                )
+                                try:
+                                    await _stream_it.aclose()
+                                except Exception:
+                                    pass
+                                break
                         else:
                             round_response += data["delta"]
                             full_response += data["delta"]
                         yield chunk  # Stream all rounds
+                        # Char-runaway guard: if the tail of the stream is
+                        # 200+ identical non-whitespace chars, the model has
+                        # degenerated into a token loop. Abort the stream so
+                        # the chat doesn't keep growing while burning tokens.
+                        if (not data.get("thinking")
+                                and len(round_response) >= _CHAR_RUNAWAY_LIMIT):
+                            _tail = round_response[-_CHAR_RUNAWAY_WINDOW:]
+                            _stripped = _tail.strip()
+                            if (len(_stripped) >= _CHAR_RUNAWAY_LIMIT
+                                    and len(set(_stripped)) == 1):
+                                _rep_char = _stripped[0]
+                                logger.warning(
+                                    f"[agent] char-runaway tripped on round "
+                                    f"{round_num}: tail is {len(_stripped)} "
+                                    f"copies of {_rep_char!r}; aborting stream"
+                                )
+                                _notice = (
+                                    f"Stopped: model was emitting "
+                                    f"{_rep_char!r} repeatedly."
+                                )
+                                yield (
+                                    f'data: {json.dumps({"type": "agent_notice", "message": _notice})}\n\n'
+                                )
+                                _force_answer = True
+                                break
                         # Detect text-fence doc streaming for rounds 2+
                         # (round 1 is handled by frontend fence detection + server fenced block path)
                         if round_num > 1 and not _doc_acc:
@@ -1991,6 +2516,40 @@ async def stream_agent_loop(
         round_texts.append(cleaned_round)
 
         if not tool_blocks:
+            # ── Self-wake (early-schedule) ───────────────────────────
+            # Schedule the self-wake task IMMEDIATELY when the round ends
+            # with no tool calls and shows deferral language. Done here
+            # (before the verifier sub-LLM call, before any other yield)
+            # so the task lands in the DB even if the client closes the
+            # SSE stream before the rest of the supervisor block runs.
+            # The check itself is cheap (regex + one DB insert with dedup).
+            try:
+                _early_lower = (cleaned_round or "").lower()
+                # Schedule a self-wake when the model gave an explicit ETA.
+                # IMPORTANT: skip this entirely when WE are running headlessly
+                # from an earlier wake (`_from_wake=True`). Chaining wakes from
+                # wakes creates a runaway: each wake-run that doesn't end in
+                # [DONE]/[BLOCKED] would schedule the next, and the supervisor
+                # ladder makes ending in a clean sentinel rare on small models.
+                # That loop pinned uvicorn at 100% CPU for hours after a single
+                # user message. With `_from_wake`, the original turn's wake IS
+                # the follow-up — don't compound it.
+                # Also dropped the prior "default to 5 min if no ETA parsed"
+                # fallback for the same reason: a turn that doesn't mention a
+                # follow-up time shouldn't get an automatic kicker that
+                # re-spawns the whole agent loop.
+                if (_task_mode
+                        and session_id and owner and not _from_wake
+                        and "[done]" not in _early_lower
+                        and "[blocked" not in _early_lower):
+                    _eta_min_early = _parse_eta_minutes(cleaned_round)
+                    if _eta_min_early is not None:
+                        _wake_min_early = min(60, max(1, _eta_min_early))
+                        _schedule_self_wake(
+                            session_id, owner, _wake_min_early, sess_name=None
+                        )
+            except Exception as _swee:
+                logger.warning(f"[agent] early self-wake schedule failed: {_swee!r}")
             # ── Completion verifier (mechanism 3a) ────────────────────
             # The model is finishing. If this was an effectful agentic turn,
             # have a fresh-context verifier independently check the work
@@ -1999,27 +2558,186 @@ async def stream_agent_loop(
             # to re-trigger). Skipped on force-answer rounds (no tools to
             # fix with), pure Q&A, and when the toggle is off.
             _claimed_done = bool(_THINK_RE.sub("", cleaned_round).strip())
-            if (_effectful_used and not _force_answer
+            # Supervisor ladder gate. When `agent_supervisor_ladder` is on,
+            # the verifier runs on EVERY effectful turn (not just when the
+            # legacy verifier toggle is on) and feeds the escalation rungs
+            # below: DIFFERENT METHOD → TEACHER → STOP+SUMMARY. The legacy
+            # toggle still works on its own for users who want only the
+            # verify-and-fix loop without the rest of the ladder.
+            _supervisor_on = _supervisor_master
+            _legacy_verifier_on = bool(get_setting("agent_verifier_subagent", False))
+            _verifier_gate = (_supervisor_on or _legacy_verifier_on)
+            # Task-mode gate: the verifier ladder is supervisor pile, scoped to
+            # actual TASK turns (install/fix/serve/etc). On chat-classified
+            # turns it stays off entirely so a greeting doesn't trigger the
+            # 4-rung escalation just because the model didn't write [DONE].
+            if not _task_mode and _verifier_gate:
+                _verifier_gate = False
+                if round_num == 1:
+                    logger.info(f"[supervisor] verifier + ladder skipped — chat-classified turn")
+            # Wake runs are headless follow-ups; skip the ladder there too.
+            if _from_wake and _verifier_gate:
+                _verifier_gate = False
+                if round_num == 1:
+                    logger.info("[supervisor] verifier + ladder skipped for wake-run")
+            _supervisor_on = _supervisor_on and not _from_wake and _task_mode
+            # Skip the verifier sub-LLM call for LOCAL endpoints (loopback /
+            # private IP / docker-host). The verifier doubles every turn's
+            # LLM cost — fine for cloud APIs but catastrophic on a CPU-
+            # served gemma where one round already takes 2+ minutes. The
+            # supervisor's other safety nets (intent-nudge, char-runaway,
+            # stream-idle, failing-tool 3-strikes) still run.
+            try:
+                from urllib.parse import urlparse as _urlparse
+                _ep_host = (_urlparse(endpoint_url).hostname or "").lower()
+                _is_local_ep = (
+                    _ep_host in {"localhost", "127.0.0.1", "0.0.0.0", "::1", "host.docker.internal"}
+                    or _ep_host.startswith(("10.", "172.16.", "172.17.", "172.18.", "172.19.",
+                                             "172.20.", "172.21.", "172.22.", "172.23.",
+                                             "172.24.", "172.25.", "172.26.", "172.27.",
+                                             "172.28.", "172.29.", "172.30.", "172.31.",
+                                             "192.168.", "100."))
+                )
+                if _is_local_ep and _verifier_gate:
+                    _verifier_gate = False
+                    if round_num == 1:
+                        logger.info(
+                            f"[supervisor] verifier sub-LLM skipped for local "
+                            f"endpoint {_ep_host!r} (would double the wait)"
+                        )
+            except Exception:
+                pass
+            # Trigger the verifier when:
+            #   (a) an effectful tool ran (the original case — did the
+            #       create/edit/bash/python work actually satisfy the request?), OR
+            #   (b) the agent has been nudged for intent-without-action repeatedly
+            #       and is still just planning without doing — at that point
+            #       it's stuck in a research-loop and the supervisor ladder
+            #       should escalate (different method → teacher → stop+summary)
+            #       even though no effectful tool ever fired.
+            _research_loop = (
+                _supervisor_on
+                and _intent_nudge_count >= _MAX_INTENT_NUDGES
+                and not _force_answer
+            )
+            # Cheap "Did you finish?" auto-nudge. This is what the user
+            # would otherwise type manually after a claimed-done turn
+            # that punted ("Would you like me to ...?", "I'll do X next",
+            # "Once it completes..."). Zero extra LLM calls — just a
+            # system message that asks the model to either declare DONE
+            # or continue with a tool call. Capped via the existing
+            # _intent_nudge_count so we never loop forever. Runs BEFORE
+            # the expensive verifier sub-LLM so the heuristic catches
+            # most cases without that cost.
+            #
+            # Skipped when the response already contains an explicit
+            # "[DONE]" sentinel (real completion) or when the model
+            # already declared blocked ("[BLOCKED:"). Skipped on
+            # force-answer rounds (model is being made to converge).
+            _resp_lower = (cleaned_round or "").lower()
+            # Completion signals: the literal [DONE] marker OR natural-language
+            # completion phrasing models actually emit. Without the broader
+            # match the unconditional stream-break nudge fires after every
+            # "Done!" / "All set!" / "task complete" summary, forcing the
+            # model to write yet another duplicate summary on the next round.
+            # We were getting 3 identical "Done!" blocks per success.
+            # `[done]` / `[blocked]` can appear on ANY line of the model's
+            # reply (start-of-line, after a table, at the end of the message),
+            # not just at the very start. Anchoring to ^ with no MULTILINE
+            # flag caused responses ending in "...\n[DONE]" to miss the gate,
+            # which then re-fired the "did you finish?" nudge — and DeepSeek
+            # responded by writing the SAME summary again on the next round,
+            # giving 5–10 duplicate "model is already running" blocks before
+            # the nudge cap broke the loop.
+            _has_natural_done = bool(re.search(
+                r"(?:^|\n)\s*\[done\]|(?:^|\n)\s*\[blocked|"
+                r"\b(?:all set|task complete|task is complete|"
+                r"successfully (?:served|deployed|launched|completed)|"
+                r"now (?:running|serving|deployed)|"
+                r"is (?:up and )?running|is now (?:served|deployed|live)|"
+                r"verified (?:with|that)|"
+                r"confirmed (?:and )?working|"
+                r"that's everything|nothing else (?:to|left))\b",
+                _resp_lower,
+            ))
+            _already_declared = _has_natural_done
+            _looks_like_question = bool(re.search(
+                r"\?\s*$|would you like|should i\b|let me know|do you want",
+                _resp_lower,
+            ))
+            if (_supervisor_on
+                    and not _force_answer
+                    and _claimed_done
+                    and not _already_declared
+                    and _looks_like_question
+                    and _intent_nudge_count < _MAX_INTENT_NUDGES):
+                _intent_nudge_count += 1
+                logger.info(
+                    f"[agent] did-you-finish nudge #{_intent_nudge_count} "
+                    f"on round {round_num}"
+                )
+                yield (
+                    f'data: {json.dumps({"type": "supervisor_step", "rung": "verify", "round": round_num, "reason": "Did you finish? Asking the agent to confirm or continue"})}\n\n'
+                )
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "Did you finish the user's request? Re-read the "
+                        "original ask and the actions you took.\n"
+                        "- If YES, end this turn with the literal token "
+                        "[DONE] on its own line and nothing else.\n"
+                        "- If NO, do NOT ask the user a question — they "
+                        "already told you what they want. Make the next "
+                        "tool call to keep progressing. Background work "
+                        "you launched (downloads, serves) does not count "
+                        "as finished until it has visibly completed."
+                    ),
+                })
+                yield f'data: {json.dumps({"type": "agent_step", "round": round_num + 1})}\n\n'
+                continue
+            # Stream-end verify on EVERY claimed-done turn when the
+            # supervisor ladder is on. The verifier sub-LLM is the
+            # correct judge of "did you actually finish the user's
+            # request" — far more reliable than a regex match on the
+            # user message. Trades 1 small LLM call per turn for
+            # catching the "model rambled then ended without acting"
+            # failure mode that a regex gate keeps missing whenever the
+            # user phrases the ask without specific verbs.
+            if (not _force_answer
                     and _claimed_done
                     and _verifier_rounds < _VERIFIER_MAX_ROUNDS
-                    # Default OFF: on weak local models the verifier can't judge
-                    # from the action-snapshot (no doc body), so it false-rejects
-                    # ("content not shown") and forces a costly extra round every
-                    # effectful turn. Opt-in via setting for strong models.
-                    and get_setting("agent_verifier_subagent", False)):
+                    and _verifier_gate
+                    and not _already_declared):
                 # Brief "working" indicator while the verifier runs.
-                yield f'data: {json.dumps({"type": "agent_step", "round": round_num})}\n\n'
+                yield f'data: {json.dumps({"type": "supervisor_step", "rung": "verify", "round": round_num, "reason": "Independent verifier reviewing the work"})}\n\n'
+                # Prefer the teacher model for verifier sub-calls when one is
+                # configured. Same-model verification is a known weak point —
+                # if the agent is Qwen-3.5 (which drops the ball) the verifier
+                # also being Qwen-3.5 rationalises the same gaps. A stronger
+                # teacher model catches more genuine failures. Falls back to
+                # the agent model + endpoint when teacher_model isn't set.
+                _v_url, _v_model, _v_headers = endpoint_url, model, headers
+                _teacher_spec = (get_setting("teacher_model", "") or "").strip()
+                if _teacher_spec:
+                    try:
+                        from src.ai_interaction import _resolve_model
+                        _v_url, _v_model, _v_headers = _resolve_model(_teacher_spec)
+                    except Exception as _vte:
+                        logger.warning(f"[agent] verifier teacher-resolve failed: {_vte!r}; using agent model")
+                        _v_url, _v_model, _v_headers = endpoint_url, model, headers
                 _vfail = await _run_verifier_subagent(
                     _verifier_instruction,
                     _build_actions_snapshot(tool_events),
-                    endpoint_url=endpoint_url, model=model, headers=headers,
+                    endpoint_url=_v_url, model=_v_model, headers=_v_headers,
                 )
                 if _vfail:
                     _verifier_rounds += 1
                     logger.info(f"[agent] verifier flagged {len(_vfail)} issue(s) on round {round_num}: {_vfail}")
-                    _note = "\n\n_Double-checked the work and found something to fix._\n\n"
-                    yield f'data: {json.dumps({"delta": _note})}\n\n'
-                    full_response += _note
+                    # Visible signal is the supervisor_step card emitted above;
+                    # don't bake a second italic note into full_response (it
+                    # persists in chat history on reload and reads as model
+                    # output, which it isn't).
+                    yield f'data: {json.dumps({"type": "agent_notice", "message": f"Verifier flagged {len(_vfail)} issue(s): " + "; ".join(_vfail)[:200]})}\n\n'
                     messages.append({
                         "role": "system",
                         "content": (
@@ -2033,6 +2751,109 @@ async def stream_agent_loop(
                     # never re-verify an unchanged state in a loop.
                     _effectful_used = False
                     continue
+
+            # ── Supervisor rung 2: DIFFERENT METHOD ──────────────────
+            # Verifier hit its 2-round cap and the model is still claiming
+            # done on an effectful turn. Push it to try a fundamentally
+            # different approach (not just re-tune the same one). One shot
+            # per turn-sequence; if it fails too, we climb to TEACHER.
+            if (_supervisor_on
+                    and (_effectful_used or _research_loop)
+                    and not _force_answer
+                    and _claimed_done
+                    and _verifier_rounds >= _VERIFIER_MAX_ROUNDS
+                    and _supervisor_diff_method_tried < _SUPERVISOR_DIFFERENT_METHOD_MAX):
+                _supervisor_diff_method_tried += 1
+                logger.info(f"[agent] supervisor rung 2 (DIFFERENT METHOD) on round {round_num}")
+                yield f'data: {json.dumps({"type": "supervisor_step", "rung": "different_method", "round": round_num, "reason": "Verifier cap reached; trying a fundamentally different approach"})}\n\n'
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "Your previous attempts to complete this request did not pass "
+                        "verification. Stop refining the same approach — it isn't working. "
+                        "Switch to a FUNDAMENTALLY DIFFERENT method: a different tool, a "
+                        "different file, a different command shape, a different decomposition "
+                        "of the problem. State in one sentence what you're changing, then "
+                        "execute the new approach with tools. If you genuinely can't think of "
+                        "a different way, say so plainly and stop."
+                    ),
+                })
+                _effectful_used = False
+                continue
+
+            # ── Supervisor rung 3: TEACHER ───────────────────────────
+            # Different-method attempt also failed. Call the configured
+            # teacher model with the user request + actions snapshot to
+            # get a fresh perspective from a stronger model. Skipped if
+            # no teacher_model is configured (the rung is a no-op then,
+            # and we fall through to STOP+SUMMARY).
+            if (_supervisor_on
+                    and (_effectful_used or _research_loop)
+                    and not _force_answer
+                    and _claimed_done
+                    and _supervisor_diff_method_tried >= _SUPERVISOR_DIFFERENT_METHOD_MAX
+                    and _supervisor_teacher_tried < _SUPERVISOR_TEACHER_MAX
+                    and (get_setting("teacher_model", "") or "").strip()):
+                _supervisor_teacher_tried += 1
+                logger.info(f"[agent] supervisor rung 3 (TEACHER) on round {round_num}")
+                yield f'data: {json.dumps({"type": "supervisor_step", "rung": "teacher", "round": round_num, "reason": "Asking teacher model for guidance"})}\n\n'
+                try:
+                    from src.teacher_escalation import _call_teacher
+                    _teacher_spec = (get_setting("teacher_model", "") or "").strip()
+                    _teacher_prompt = (
+                        "An agent has been trying to complete the user request below but "
+                        "verification keeps failing. Read the request and the actions the "
+                        "agent took, then give CONCRETE, ACTIONABLE guidance the agent can "
+                        "execute in its next turn. Be specific about exact commands or tool "
+                        "calls. Do not write prose — write step-by-step instructions.\n\n"
+                        f"USER REQUEST:\n{_verifier_instruction}\n\n"
+                        f"ACTIONS TAKEN:\n{_build_actions_snapshot(tool_events)}"
+                    )
+                    _teacher_reply = await _call_teacher(_teacher_spec, _teacher_prompt)
+                except Exception as _te:
+                    logger.warning(f"[agent] teacher call failed: {_te}")
+                    _teacher_reply = None
+                if _teacher_reply and _teacher_reply.strip():
+                    messages.append({
+                        "role": "system",
+                        "content": (
+                            "The teacher model reviewed your work and gave the following "
+                            "guidance. Follow it with tools this turn:\n\n" + _teacher_reply.strip()
+                        ),
+                    })
+                    _effectful_used = False
+                    continue
+                # Teacher unreachable or empty — fall through to STOP rung.
+
+            # ── Supervisor rung 4: STOP + SUMMARY ────────────────────
+            # All rungs exhausted. Don't let the model silently quit —
+            # force it to tell the user in one sentence what's blocking,
+            # then stop. Single shot; the loop breaks after this round.
+            if (_supervisor_on
+                    and (_effectful_used or _research_loop) and not _force_answer
+                    and _claimed_done
+                    and _supervisor_diff_method_tried >= _SUPERVISOR_DIFFERENT_METHOD_MAX
+                    and (_supervisor_teacher_tried >= _SUPERVISOR_TEACHER_MAX
+                         or not (get_setting("teacher_model", "") or "").strip())
+                    and not _supervisor_stop_summary_issued):
+                _supervisor_stop_summary_issued = True
+                logger.info(f"[agent] supervisor rung 4 (STOP+SUMMARY) on round {round_num}")
+                yield f'data: {json.dumps({"type": "supervisor_step", "rung": "stop", "round": round_num, "reason": "All recovery rungs exhausted; asking model to state the blocker and stop"})}\n\n'
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "You've tried multiple approaches and verification still fails. "
+                        "DO NOT attempt another tool call. In one or two sentences, tell "
+                        "the user EXACTLY what is blocking you — be concrete (the file you "
+                        "couldn't access, the command that kept failing with what error, "
+                        "the missing piece of context). Then stop."
+                    ),
+                })
+                # Force-answer mode prevents another tool round; the next
+                # turn will produce the blocker summary and naturally end.
+                _force_answer = True
+                _effectful_used = False
+                continue
             # ── Intent-without-action supervisor ─────────────────────
             # Catch "Let me tail the output" / "I'll check the logs" /
             # "Let me investigate" patterns where the model announces an
@@ -2045,12 +2866,16 @@ async def stream_agent_loop(
             _intent_text = _THINK_RE.sub("", cleaned_round).strip()
             _intent_match = _INTENT_RE.search(_intent_text) if _intent_text else None
             # Only nudge when the round REALLY looks like an unfinished
-            # promise: short response (<400 chars), no fenced code/answer,
-            # and an action-intent phrase was matched. Long answers that
-            # happen to contain "let me know" are not stalls.
+            # promise: NO fenced code/answer (a real answer is final), an
+            # action-intent phrase matched, and we haven't already
+            # nudged too many times this turn. The previous
+            # length<400 filter killed this on the most common failure
+            # case — a verbose planning paragraph that ends "Let me try
+            # to serve…" without ever firing serve_model. Verbose plans
+            # ARE the failure, not a defense against false positives.
             _looks_like_promise = (
-                _intent_match is not None
-                and len(_intent_text) < 400
+                _task_mode
+                and _intent_match is not None
                 and "```" not in _intent_text
                 and _intent_nudge_count < _MAX_INTENT_NUDGES
             )
@@ -2073,7 +2898,74 @@ async def stream_agent_loop(
                 # Visible signal in the stream so the user knows we caught it.
                 yield f'data: {json.dumps({"type": "agent_step", "round": round_num + 1})}\n\n'
                 continue
-            break  # no tools — done
+            # ── Thought-but-no-action nudge ──────────────────────────
+            # Model thought through a `<think>` block, never emitted a
+            # tool call, and produced no visible text. From the user's
+            # side the turn just dies silently with "Thinking ▁▂▃" still
+            # showing. The intent-nudge above only fires on visible
+            # text matching the regex; this catches the more common
+            # weak-model failure of thinking forever then giving up.
+            if (round_reasoning
+                    and not _intent_text  # set above by intent block
+                    and _intent_nudge_count < _MAX_INTENT_NUDGES):
+                _intent_nudge_count += 1
+                logger.warning(
+                    f"[agent] thought-but-no-action nudge "
+                    f"#{_intent_nudge_count} on round {round_num}: "
+                    f"{len(round_reasoning)} reasoning chars, "
+                    "zero visible output, zero tool calls"
+                )
+                yield (
+                    f'data: {json.dumps({"type": "agent_notice", "message": "Model thought but produced nothing — nudging it to actually act."})}\n\n'
+                )
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "You finished a thinking block without emitting any "
+                        "tool call OR visible text. The user only sees a "
+                        "blank turn — the most frustrating possible outcome. "
+                        "This turn MUST end with one of:\n"
+                        "  (a) an actual tool/function call to make progress, or\n"
+                        "  (b) one short sentence explaining what's blocking "
+                        "you. Do NOT think silently again — produce a tool "
+                        "call or a visible sentence this turn."
+                    ),
+                })
+                yield f'data: {json.dumps({"type": "agent_step", "round": round_num + 1})}\n\n'
+                continue
+            # ── Self-wake on deferred work ──────────────────────────
+            # Agent ended with no tool calls, no [DONE], and SAID it
+            # would wait for something to finish ("31 minutes remaining",
+            # "once the download completes", etc). Schedule a one-off
+            # ScheduledTask that pings this session at the parsed ETA so
+            # the agent re-checks status without the user having to type
+            # "did you finish?" manually. Cap at 1h to avoid runaway
+            # schedules. Only one wake per session at a time.
+            try:
+                if (_task_mode
+                        and session_id and owner and not _from_wake
+                        and "[done]" not in (cleaned_round or "").lower()
+                        and "[blocked" not in (cleaned_round or "").lower()):
+                    _eta_min = _parse_eta_minutes(cleaned_round)
+                    if _eta_min and _eta_min > 0:
+                        _wake_min = min(60, max(1, _eta_min))
+                        _schedule_self_wake(session_id, owner, _wake_min, sess_name=None)
+                        yield (
+                            f'data: {json.dumps({"type": "agent_notice", "message": f"Scheduled a self-check in ~{_wake_min} min to follow up."})}\n\n'
+                        )
+            except Exception as _swe:
+                logger.warning(f"[agent] self-wake schedule failed: {_swe!r}")
+            # Stream ended naturally. The intent-nudge above already caught
+            # the "I'll do X but didn't" punt case; the loop-breaker catches
+            # circles; the poll-backstop catches status-poll loops. If we
+            # got here, the model genuinely finished its turn — break.
+            # (The old "stream-break unconditional nudge" demanded a literal
+            # [DONE] sentinel and fired duplicate "did you finish?" messages
+            # on every conversational response, including short tool-success
+            # confirmations like "Fixed!" — turning them into 4-6 identical
+            # rounds. Removed; the existing targeted nudges cover the cases
+            # that actually need a kick.)
+            break
 
         # ── Loop-breaker (Terminus-style stall detector) ──────────────
         # Stall detector for repeated no-progress tool loops.
@@ -2086,11 +2978,14 @@ async def stream_agent_loop(
         # runaway backstop). On bail we don't give up — we force one
         # tool-free round so the model declares done or declares blocked,
         # mirroring Terminus's explicit-completion handshake.
-        _sig = "|".join(sorted(f"{b.tool_type}:{(b.content or '').strip()[:120]}" for b in tool_blocks))
+        # Build sig from the FULL trimmed content so two bash calls with the
+        # same prefix but different commands aren't lumped together. Previous
+        # 120-char cap mis-flagged legitimate `bash /tmp/llama.cpp/... | grep
+        # backend` vs `... | grep cuda` as identical and tripped the breaker
+        # on every diagnostic exploration.
+        _sig = "|".join(sorted(f"{b.tool_type}:{(b.content or '').strip()[:600]}" for b in tool_blocks))
         _is_repeat = _sig in _recent_call_sigs
         _recent_call_sigs.append(_sig)
-        for _b in tool_blocks:
-            _tool_type_counts[_b.tool_type] += 1
         # "Real" answer text = round text minus <think> blocks. Empty-think
         # rounds (just "<think>\n\n</think>" + a tool call) must not read as
         # progress, so strip think before checking.
@@ -2101,10 +2996,41 @@ async def stream_agent_loop(
             _stuck_rounds += 1
         else:
             _stuck_rounds = 0
-        _runaway = next((t for t, n in _tool_type_counts.items() if n >= 15), None)
-        if _stuck_rounds >= 4 or _runaway:
-            reason = (f"calling {_runaway} over and over" if _runaway
-                      else "repeating the same tool calls without new progress")
+        # Polling backstop: tail_serve_output / list_served_models / list_downloads
+        # against the SAME session_id are pure status polls — writing one
+        # sentence "still loading" between each call should NOT pass as
+        # progress. Without this guard, the model spirals through "still
+        # loading… let me check again" for the entire 20-round budget while
+        # a 233 GB vLLM model loads shards. Force-answer after the SAME
+        # poll signature shows up 3 times (counting the current round).
+        _POLL_TOOL_TYPES = {"tail_serve_output", "list_served_models", "list_downloads"}
+        if tool_blocks and all(b.tool_type in _POLL_TOOL_TYPES for b in tool_blocks):
+            _same_poll_count = sum(1 for s in _recent_call_sigs if s == _sig)
+            if _same_poll_count >= 3:
+                reason = "polling the same status tool repeatedly while waiting on an external task"
+                logger.warning(f"[agent] poll-backstop tripped on round {round_num} ({reason}); sig={_sig[:80]!r}")
+                _force_answer = True
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "You've polled the same status tool 3+ times this turn while "
+                        "an external task (model load / download / build) is still "
+                        "in progress. STOP polling. End the turn now with a short "
+                        "status summary + an explicit ETA like 'check in ~5 min' — "
+                        "a self-wake will re-enter the chat at that time to verify, "
+                        "or the user will come back when ready. Don't tail again."
+                    ),
+                })
+                full_response += "\n\n"
+                yield f'data: {json.dumps({"type": "agent_step", "round": round_num + 1})}\n\n'
+                continue
+        # Note: the per-tool-type runaway counter is intentionally NOT
+        # tracked here. Capping bash at 15 punished good models doing
+        # legitimate multi-step exploration ("check binary, check libs,
+        # check deps, …"). Stick with the sig-based stuck-round check —
+        # genuine no-progress loops still trip it.
+        if _stuck_rounds >= 4:
+            reason = "repeating the same tool calls without new progress"
             logger.warning(f"[agent] loop-breaker tripped on round {round_num} ({reason}); sig={_sig[:80]!r}")
             # The model has been executing tools, so its results are already
             # in context. Force ONE tool-free round to converge: write the
@@ -2129,6 +3055,19 @@ async def stream_agent_loop(
             full_response += "\n\n"
             yield f'data: {json.dumps({"type": "agent_step", "round": round_num + 1})}\n\n'
             continue
+
+        # Tool-call override: once the model has actually called a tool this
+        # turn, lock task mode for the rest of the turn regardless of what the
+        # initial classifier decided. The model has reached for an action —
+        # the supervisor pile applies from here on, so a punt mid-task still
+        # gets nudged (and the [DONE] requirement still applies to the final
+        # round). Idempotent — flips once, stays True.
+        if tool_blocks and _supervisor_master and not _task_mode:
+            _task_mode = True
+            logger.info(
+                f"[classifier] auto-upgraded to task mode on round {round_num} "
+                f"(tool call fired: {[b.tool_type for b in tool_blocks]})"
+            )
 
         # Pre-stream document content for fenced tool blocks (non-native path)
         # Native path already streamed via tool_call_delta above
@@ -2209,16 +3148,74 @@ async def stream_agent_loop(
                     await _progress_q.put(None)
 
             _tool_task = asyncio.create_task(_run_tool())
-            # Drain progress events as they arrive — block until the
-            # next event OR the tool finishes (sentinel = None).
+            # Backoff ticks for a stuck/slow tool. Each interval (cumulative
+            # seconds from tool start) emits a "still running" progress
+            # notice. After the final tick the tool is cancelled and the
+            # next round of the main agent loop decides retry / different-
+            # method / stop via the existing supervisor ladder.
+            _STUCK_TICKS_S = [30, 60, 120, 300, 600, 1200]
+            _tool_start = time.time()
+            _next_tick = 0
+            _tool_aborted_by_watchdog = False
+            # Drain progress events as they arrive. Block until the next
+            # event, the next watchdog tick, OR the tool finishes
+            # (sentinel = None). Wrap in a try/except so a watchdog
+            # cancel never escapes as an asyncio.CancelledError.
             while True:
-                evt = await _progress_q.get()
+                # Pick the next interval that's still ahead. Skip past
+                # ticks the tool already outran so we don't emit stale
+                # "30s elapsed" notices ten minutes in.
+                elapsed = time.time() - _tool_start
+                next_deadline = None
+                while _next_tick < len(_STUCK_TICKS_S):
+                    if _STUCK_TICKS_S[_next_tick] > elapsed:
+                        next_deadline = _STUCK_TICKS_S[_next_tick]
+                        break
+                    _next_tick += 1
+                if next_deadline is None:
+                    # All ticks consumed AND the tool is STILL running.
+                    # Cancel it and feed the abort back into the loop so
+                    # the supervisor can decide what to do next round.
+                    if not _tool_task.done():
+                        _tool_task.cancel()
+                        _tool_aborted_by_watchdog = True
+                        try:
+                            await _tool_task
+                        except (asyncio.CancelledError, Exception):
+                            pass
+                    break
+                timeout = max(0.1, next_deadline - elapsed)
+                try:
+                    evt = await asyncio.wait_for(_progress_q.get(), timeout=timeout)
+                except asyncio.TimeoutError:
+                    # Tool still running past the next deadline. Emit a
+                    # status; the main loop's ladder picks up the
+                    # eventual abort if we reach the last tick.
+                    yield (
+                        f'data: {json.dumps({"type": "tool_progress", "tool": block.tool_type, "round": round_num, "elapsed_s": int(next_deadline), "still_running": True})}\n\n'
+                    )
+                    _next_tick += 1
+                    continue
                 if evt is None:
                     break
                 yield (
                     f'data: {json.dumps({"type": "tool_progress", "tool": block.tool_type, "round": round_num, **evt})}\n\n'
                 )
-            desc, result = await _tool_task
+            if _tool_aborted_by_watchdog:
+                desc = block.tool_type
+                _elapsed_min = int((time.time() - _tool_start) / 60)
+                result = {
+                    "error": (
+                        f"Tool {block.tool_type} aborted by watchdog after "
+                        f"~{_elapsed_min}m with no completion. Decide: retry "
+                        "with different arguments, try a different approach, "
+                        "or end the turn explaining the blocker."
+                    ),
+                    "exit_code": 124,
+                    "stuck": True,
+                }
+            else:
+                desc, result = await _tool_task
 
             # Extract structured web sources from web_search tool output.
             # web_search returns {"output": ..., "exit_code": 0}; check "output"
@@ -2388,6 +3385,67 @@ async def stream_agent_loop(
             tool_results.append(formatted)
             tool_result_texts.append(formatted)
 
+        # Failing-tool repetition tracker. If the SAME tool call signature
+        # returns an error 3 rounds in a row, force a tool-free round so
+        # the model has to either fix its call from scratch or admit it's
+        # blocked. The existing _stuck_rounds breaker misses this because
+        # it requires empty _real_text — weak models often ramble between
+        # failed retries which counts as text and keeps the breaker from
+        # firing while the loop spins.
+        #
+        # Critical: check the actual exit_code / `error` key from the tool
+        # result, NOT a regex on the formatted text. The text contains
+        # listings of prior failed work (e.g. list_served_models prints
+        # "Qwen3.5: error" lines for crashed servers), and a substring
+        # search on "error" then false-positives a successful status
+        # check as failing — tools get disabled after three status
+        # checks and the loop dies for no reason.
+        # tool_results is formatted text; the structured exit_code lives on
+        # tool_events. Look only at this round's events (the last N where
+        # N == len(tool_blocks)) — earlier rounds' events have already
+        # been counted.
+        _this_round_events = tool_events[-len(tool_blocks):] if tool_blocks else []
+        _looks_like_error = any(
+            (_ev.get("exit_code") not in (None, 0))
+            for _ev in _this_round_events
+            if isinstance(_ev, dict)
+        )
+        if _looks_like_error and tool_blocks:
+            _ftk = "|".join(sorted(
+                f"{b.tool_type}:{(b.content or '').strip()[:120]}"
+                for b in tool_blocks
+            ))
+            _failing_tool_sigs[_ftk] = _failing_tool_sigs.get(_ftk, 0) + 1
+            if _failing_tool_sigs[_ftk] >= 3:
+                logger.warning(
+                    f"[agent] failing-tool repetition tripped on round "
+                    f"{round_num}: {_ftk[:80]!r} failed "
+                    f"{_failing_tool_sigs[_ftk]} times; forcing tool-free round"
+                )
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "Your last tool call has failed with the same error "
+                        f"{_failing_tool_sigs[_ftk]} times. STOP retrying with "
+                        "the same arguments. Either (a) fix the call by "
+                        "reading the error message carefully — usually the "
+                        "fix is supplying a required argument that you "
+                        "omitted — or (b) end the turn explaining what you "
+                        "couldn't do. Do NOT emit another tool call with "
+                        "the same arguments."
+                    ),
+                })
+                _force_answer = True
+        else:
+            # New sig OR success — clear the counter for the sig we just ran
+            # so a previously-failing call that now works doesn't keep tripping.
+            if tool_blocks:
+                _ftk_now = "|".join(sorted(
+                    f"{b.tool_type}:{(b.content or '').strip()[:120]}"
+                    for b in tool_blocks
+                ))
+                _failing_tool_sigs.pop(_ftk_now, None)
+
         # If budget was hit, stop the loop
         if budget_hit:
             break
@@ -2396,6 +3454,26 @@ async def stream_agent_loop(
         _append_tool_results(messages, round_response, native_tool_calls,
                              tool_results, tool_result_texts, used_native, round_num,
                              round_reasoning=round_reasoning)
+
+        # Round-boundary user-input queue. The user can POST messages to
+        # /api/sessions/{id}/queue while the agent is mid-chain; drain
+        # them here so they enter the conversation at the natural boundary
+        # between tool rounds (no aborting the in-flight tool, no waiting
+        # for the whole chain to finish). The agent's next round sees
+        # them and adapts.
+        try:
+            _queued = drain_session_queue(session_id) if session_id else []
+            for _q in _queued:
+                messages.append({"role": "user", "content": _q})
+                yield (
+                    f'data: {json.dumps({"type": "user_queued_inject", "round": round_num + 1, "message": _q})}\n\n'
+                )
+                logger.info(
+                    f"[agent] injected queued user msg between rounds "
+                    f"({len(_q)} chars) on round {round_num}"
+                )
+        except Exception as _qe:
+            logger.warning(f"[agent] queue drain failed: {_qe!r}")
 
         # Emit agent_step event
         yield (

@@ -534,6 +534,57 @@ def setup_session_routes(session_manager: SessionManager, config: dict, webhook_
         """Delete session via POST (for navigator.sendBeacon on page close)."""
         return delete_session(request, sid)
 
+    @router.post("/sessions/{session_id}/queue")
+    async def queue_session_message(session_id: str, request: Request):
+        """Queue a user message to be injected at the next agent round boundary.
+
+        Lets the user keep typing while a multi-step agent chain is running.
+        The agent loop drains this queue between rounds and the queued
+        messages enter as fresh user turns mid-chain. Returns the new
+        queue depth and whether the session is currently streaming."""
+        from src.agent_loop import enqueue_user_message, peek_session_queue
+        # Resolve owner from session for cross-user safety, same as the
+        # other session-scoped endpoints.
+        try:
+            _verify_session_owner(request, session_id)
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+        body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+        msg = (body.get("message") or "").strip()
+        if not msg:
+            raise HTTPException(400, "message required")
+        if len(msg) > 32000:
+            raise HTTPException(400, "message too long")
+        depth = enqueue_user_message(session_id, msg)
+        return {"ok": True, "depth": depth, "queued": peek_session_queue(session_id)}
+
+    @router.get("/sessions/{session_id}/queue")
+    async def get_session_queue(session_id: str, request: Request):
+        """Peek at the current queue for a session (UI live-render)."""
+        from src.agent_loop import peek_session_queue
+        try:
+            _verify_session_owner(request, session_id)
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+        return {"queued": peek_session_queue(session_id)}
+
+    @router.delete("/sessions/{session_id}/queue")
+    async def clear_session_queue_route(session_id: str, request: Request):
+        """Drop all queued messages for the session."""
+        from src.agent_loop import clear_session_queue
+        try:
+            _verify_session_owner(request, session_id)
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+        n = clear_session_queue(session_id)
+        return {"ok": True, "cleared": n}
+
     @router.post("/sessions/bulk-delete")
     async def bulk_delete_sessions(request: Request):
         """Delete multiple sessions (for compare cleanup via sendBeacon)."""

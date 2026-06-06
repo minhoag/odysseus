@@ -101,6 +101,13 @@ DEFAULT_SETTINGS = {
     "research_run_timeout_seconds": 1800,
     "agent_max_tool_calls": 0,
     "agent_max_rounds": 20,  # per-message agent step cap (clamped 1..200)
+    # Opt-in supervisor ladder. When on, every effectful agent turn that
+    # claims "done" is verified by an independent subagent; on FAIL the
+    # ladder escalates to "try a different method" → "ask teacher_model"
+    # (if set) → "stop and state the blocker". Each rung emits a visible
+    # `supervisor_step` SSE event so the user can see escalation in chat.
+    # Default OFF — adds latency on every effectful turn.
+    "agent_supervisor_ladder": False,
     "agent_input_token_budget": 6000,
     # Ceiling on the *auto-derived* input budget that #1230 introduced. Has
     # no effect when `agent_input_token_budget` is explicitly set (the user's

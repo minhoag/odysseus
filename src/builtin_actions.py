@@ -2192,6 +2192,114 @@ async def action_cookbook_serve(
     return f"Launched {repo_id} (session {sid})", True
 
 
+async def action_ping_chat_session(owner: str, **kwargs) -> Tuple[str, bool]:
+    """Re-enter a chat session and run one more agent turn.
+
+    Used by the agent_loop's "wake itself in N min" mechanism: after a turn
+    that punts ("once the download finishes, I'll serve…"), the loop schedules
+    a one-off ScheduledTask with this action, scheduled_date = now + ETA, and
+    prompt = the message to inject. When the task fires, we look up the
+    session, append the prompt as a user message, run a single full agent
+    turn (tools enabled) headlessly, and persist the assistant reply +
+    tool events to the session so the user sees them next time they open
+    the chat.
+
+    kwargs:
+      session_id  the chat session to re-enter
+      prompt      what to inject as the next user message
+                  (default: "Did you finish? if yes [DONE], else continue")
+    """
+    import asyncio as _asyncio
+    import json as _json
+    from src.ai_interaction import get_session_manager
+    from src.agent_loop import stream_agent_loop
+    from core.models import ChatMessage
+
+    sid = (kwargs.get("session_id") or "").strip()
+    if not sid:
+        return ("ping_chat_session: missing session_id", False)
+    prompt = (kwargs.get("prompt") or
+              "Did you finish the user's original request? If yes, end this "
+              "turn with [DONE] on its own line. If no, do NOT ask me a "
+              "question — make the next tool call to keep progressing. "
+              "Check status (list_downloads / list_served_models / etc.) "
+              "before answering.")
+    mgr = get_session_manager()
+    if not mgr:
+        return ("ping_chat_session: session manager unavailable", False)
+    sess = mgr.get_session(sid)
+    if not sess:
+        return (f"ping_chat_session: session {sid!r} not found", False)
+    if owner and getattr(sess, "owner", None) and sess.owner != owner:
+        return (f"ping_chat_session: session {sid!r} owner mismatch", False)
+    if not getattr(sess, "endpoint_url", "") or not getattr(sess, "model", ""):
+        return (f"ping_chat_session: session {sid!r} missing endpoint/model", False)
+    # Inject the wake prompt with a `wake_check_in: True` metadata flag
+    # so the frontend renders it as a system chip ("Self-check") instead
+    # of a literal user-bubble. Previously persisted as a plain user
+    # message and showed up in chat history as if the human typed it.
+    sess.add_message(ChatMessage(
+        "user", prompt,
+        metadata={"wake_check_in": True, "hidden_from_user_view": True},
+    ))
+    messages = sess.get_context_messages()
+    assistant_text = []
+    tool_events = []
+    seen_done = False
+    try:
+        async for chunk in stream_agent_loop(
+            endpoint_url=sess.endpoint_url,
+            model=sess.model,
+            messages=messages,
+            headers=getattr(sess, "headers", None) or {},
+            session_id=sid,
+            owner=owner,
+            _from_wake=True,
+        ):
+            # SSE lines look like 'data: {...}\n\n'. Parse to capture text deltas
+            # and tool events so we can persist them.
+            if not chunk.startswith("data: "):
+                continue
+            try:
+                payload = _json.loads(chunk[len("data: "):].strip())
+            except Exception:
+                continue
+            if "delta" in payload and not payload.get("thinking"):
+                assistant_text.append(payload["delta"])
+            elif payload.get("type") == "tool_output":
+                tool_events.append(payload)
+    except Exception as e:
+        logger.warning(f"ping_chat_session: agent loop failed: {e!r}")
+        return (f"ping_chat_session: agent loop failed: {e!r}", False)
+    final_text = ("".join(assistant_text)).strip()
+    if not final_text:
+        final_text = "(no visible response)"
+    sess.add_message(ChatMessage(
+        "assistant", final_text,
+        metadata={"tool_events": tool_events, "model": sess.model, "ping_check_in": True},
+    ))
+    seen_done = "[done]" in final_text.lower()
+    seen_blocked = "[blocked" in final_text.lower()
+    # If the check-in itself still defers ("in another N min"), re-schedule
+    # so the wake chain continues without the user having to interrupt.
+    # Caps via the scheduler dedup + the 1h ceiling on each wake.
+    if not seen_done and not seen_blocked:
+        try:
+            from src.agent_loop import _parse_eta_minutes, _schedule_self_wake
+            eta = _parse_eta_minutes(final_text)
+            if eta and eta > 0:
+                wake = min(60, max(1, eta))
+                _schedule_self_wake(sid, owner, wake, sess_name=getattr(sess, "name", None))
+                logger.info(
+                    f"ping_chat_session: re-scheduled follow-up wake "
+                    f"for session {sid} in {wake} min"
+                )
+        except Exception as e:
+            logger.warning(f"ping_chat_session: follow-up reschedule failed: {e!r}")
+    label = "DONE" if seen_done else ("BLOCKED" if seen_blocked else "still working")
+    return (f"ping_chat_session: session {sid} → {label} ({len(final_text)} chars)", True)
+
+
 BUILTIN_ACTIONS = {
     "tidy_sessions": action_tidy_sessions,
     "tidy_documents": action_tidy_documents,
@@ -2212,6 +2320,7 @@ BUILTIN_ACTIONS = {
     "audit_skills": action_audit_skills,
     "check_email_urgency": action_check_email_urgency,
     "cookbook_serve": action_cookbook_serve,
+    "ping_chat_session": action_ping_chat_session,
     # ping_notes removed from the registry — runs only inside `_note_pings_loop`.
 }
 

@@ -408,13 +408,15 @@ def setup_cookbook_routes() -> APIRouter:
         session_id = f"cookbook-{uuid.uuid4().hex[:8]}"
         wrapper_script = TMUX_LOG_DIR / f"{session_id}.sh"
 
-        # When a download directory is set, target a per-model subfolder under it
-        # (<dir>/<name>) so the flat-directory cache scan lists it as its own
-        # model. Without it, hf/snapshot_download falls back to the HF cache.
-        _dl_short = req.repo_id.split("/")[-1] if "/" in req.repo_id else req.repo_id
-        _dl_base = (req.local_dir.rstrip("/") + "/" + _dl_short) if req.local_dir else None
-        _dl_shell = _shell_path(_dl_base) if _dl_base else None      # for hf CLI / bash
-        _dl_pyarg = (", local_dir=os.path.expanduser(" + repr(_dl_base) + ")") if _dl_base else ""
+        # Custom download dir: point the HF cache at <dir>/hub via env vars
+        # (HF_HOME + HUGGINGFACE_HUB_CACHE) instead of --local-dir. local_dir
+        # produces a flat layout (<dir>/<name>/<file>) and the local-dir
+        # bookkeeping files (.cache/huggingface/.gitignore.lock), and it
+        # also breaks robust resume on flaky transfers — the blob-based hub
+        # cache survives SSL ReadError mid-stream by reusing <sha>.incomplete,
+        # local_dir does not. See issue #2722.
+        _dl_hf_home_shell = _shell_path(req.local_dir.rstrip("/")) if req.local_dir else None
+        _dl_pyarg = ""  # snapshot_download honors the env vars too — no kwarg needed
 
         # Build the hf download command. Redirection to suppress the interactive
         # "update available? [Y/n]" prompt is added per-platform further down
@@ -422,8 +424,6 @@ def setup_cookbook_routes() -> APIRouter:
         hf_cmd = f"hf download {req.repo_id}"
         if req.include:
             hf_cmd += f" --include '{req.include}'"
-        if _dl_shell:
-            hf_cmd += f" --local-dir {_dl_shell}"
 
         # Build the shell wrapper — runs hf download directly in tmux (which is a TTY)
         # No script/tee needed — we'll use tmux capture-pane to read output
@@ -431,6 +431,13 @@ def setup_cookbook_routes() -> APIRouter:
         lines.extend(_user_shell_path_bootstrap())
         if req.hf_token:
             lines.append(f"export HF_TOKEN='{_bash_squote(req.hf_token)}'")
+        if _dl_hf_home_shell:
+            # Make hf download / snapshot_download honor the chosen dir via the
+            # standard HF cache (gives us the models--org--name/blobs/... layout
+            # with resumable .incomplete blobs).
+            lines.append(f"export HF_HOME={_dl_hf_home_shell}")
+            lines.append(f"export HUGGINGFACE_HUB_CACHE={_dl_hf_home_shell}/hub")
+            lines.append(f"export HF_HUB_CACHE={_dl_hf_home_shell}/hub")
         # Ensure pip-user scripts (e.g. hf CLI installed via --user) are on PATH
         lines.append('export PATH="$HOME/.local/bin:$PATH"')
         # When Odysseus runs from a venv (e.g. native macOS install), put its bin
@@ -474,6 +481,14 @@ def setup_cookbook_routes() -> APIRouter:
             ps_lines.append('New-Item -ItemType Directory -Force -Path $sessionDir | Out-Null')
             if req.hf_token:
                 ps_lines.append(f"$env:HF_TOKEN = '{_ps_squote(req.hf_token)}'")
+            if req.local_dir:
+                # Mirror the bash branch — point the HF cache at the user's dir
+                # via env vars instead of --local-dir, so resume works on flaky
+                # transfers (issue #2722).
+                _dl_ps = _ps_squote(req.local_dir.rstrip("/"))
+                ps_lines.append(f"$env:HF_HOME = '{_dl_ps}'")
+                ps_lines.append(f"$env:HUGGINGFACE_HUB_CACHE = '{_dl_ps}/hub'")
+                ps_lines.append(f"$env:HF_HUB_CACHE = '{_dl_ps}/hub'")
             if req.env_prefix:
                 ps_lines.append(_safe_env_prefix(req.env_prefix))
             # Try hf CLI, fall back to Python huggingface_hub, then auto-install
@@ -531,6 +546,10 @@ def setup_cookbook_routes() -> APIRouter:
             runner_lines.append("deactivate 2>/dev/null; hash -r")
             if req.hf_token:
                 runner_lines.append(f"export HF_TOKEN='{_bash_squote(req.hf_token)}'")
+            if _dl_hf_home_shell:
+                runner_lines.append(f"export HF_HOME={_dl_hf_home_shell}")
+                runner_lines.append(f"export HUGGINGFACE_HUB_CACHE={_dl_hf_home_shell}/hub")
+                runner_lines.append(f"export HF_HUB_CACHE={_dl_hf_home_shell}/hub")
             if req.env_prefix:
                 runner_lines.append(_safe_env_prefix(req.env_prefix))
             else:
@@ -558,25 +577,42 @@ def setup_cookbook_routes() -> APIRouter:
             # download's "not authorized" failure can be told apart from a missing
             # token (the token is masked — we only print applied / not-set).
             runner_lines.append(_HF_TOKEN_STATUS_SNIPPET)
-            # Try hf CLI first, fall back to Python huggingface_hub, then auto-install
-            runner_lines.append('if command -v hf &>/dev/null; then')
-            # < /dev/null suppresses interactive "update available? [Y/n]" prompt
-            runner_lines.append(f'  {hf_cmd} < /dev/null')
-            runner_lines.append('elif python3 -c "import huggingface_hub" 2>/dev/null; then')
-            runner_lines.append('  echo "hf CLI not found, using Python huggingface_hub..."')
-            runner_lines.append(f'  python3 -c "import os; from huggingface_hub import snapshot_download; snapshot_download(\'{req.repo_id}\'{_dl_pyarg}, max_workers={4 if req.disable_hf_transfer else 8})"')
-            runner_lines.append('else')
-            runner_lines.append('  echo "Installing huggingface-hub and dependencies..."')
-            runner_lines.append('  pip install --no-deps -q huggingface-hub 2>/dev/null')
+            # Wrap the download in a retry loop. Large HF transfers (10GB+)
+            # routinely hit transient httpx.ReadError / SSL record-layer
+            # failures mid-stream; one shot of `hf download` exits non-zero
+            # and the user sees "crashed" even though the blob cache still
+            # has the .incomplete file ready to resume. We retry ~10 times
+            # with a 30s sleep between attempts (same pattern as the manual
+            # workaround in issue #2722). The hub cache layout means each
+            # retry picks up where the last left off.
+            mw = 4 if req.disable_hf_transfer else 8
+            runner_lines.append('_max_retries=10; _attempt=0; _ec=0')
+            runner_lines.append('while [ $_attempt -lt $_max_retries ]; do')
+            runner_lines.append('  _attempt=$((_attempt+1))')
+            runner_lines.append('  if command -v hf &>/dev/null; then')
+            runner_lines.append(f'    {hf_cmd} < /dev/null')
+            runner_lines.append('  elif python3 -c "import huggingface_hub" 2>/dev/null; then')
+            runner_lines.append('    [ $_attempt -eq 1 ] && echo "hf CLI not found, using Python huggingface_hub..."')
+            runner_lines.append(f'    python3 -c "import os; from huggingface_hub import snapshot_download; snapshot_download(\'{req.repo_id}\'{_dl_pyarg}, max_workers={mw})"')
+            runner_lines.append('  else')
+            runner_lines.append('    echo "Installing huggingface-hub and dependencies..."')
+            runner_lines.append('    pip install --no-deps -q huggingface-hub 2>/dev/null')
             if req.disable_hf_transfer:
-                runner_lines.append('  pip install -q filelock fsspec packaging pyyaml tqdm typer httpx requests 2>/dev/null')
-                runner_lines.append('  export HF_HUB_ENABLE_HF_TRANSFER=0')
+                runner_lines.append('    pip install -q filelock fsspec packaging pyyaml tqdm typer httpx requests 2>/dev/null')
+                runner_lines.append('    export HF_HUB_ENABLE_HF_TRANSFER=0')
             else:
-                runner_lines.append('  pip install -q filelock fsspec packaging pyyaml tqdm typer httpx requests hf_transfer 2>/dev/null')
-                runner_lines.append("  python3 -c 'import hf_transfer' 2>/dev/null && export HF_HUB_ENABLE_HF_TRANSFER=1")
-            runner_lines.append(f'  python3 -c "import os; from huggingface_hub import snapshot_download; snapshot_download(\'{req.repo_id}\'{_dl_pyarg}, max_workers={4 if req.disable_hf_transfer else 8})"')
-            runner_lines.append('fi')
-            runner_lines.append('_ec=$?; if [ $_ec -eq 0 ]; then echo ""; echo "DOWNLOAD_OK"; else echo ""; echo "DOWNLOAD_FAILED (exit $_ec)"; fi')
+                runner_lines.append('    pip install -q filelock fsspec packaging pyyaml tqdm typer httpx requests hf_transfer 2>/dev/null')
+                runner_lines.append("    python3 -c 'import hf_transfer' 2>/dev/null && export HF_HUB_ENABLE_HF_TRANSFER=1")
+            runner_lines.append(f'    python3 -c "import os; from huggingface_hub import snapshot_download; snapshot_download(\'{req.repo_id}\'{_dl_pyarg}, max_workers={mw})"')
+            runner_lines.append('  fi')
+            runner_lines.append('  _ec=$?')
+            runner_lines.append('  if [ $_ec -eq 0 ]; then break; fi')
+            runner_lines.append('  if [ $_attempt -lt $_max_retries ]; then')
+            runner_lines.append('    echo ""; echo "Download attempt $_attempt failed (exit $_ec) — retrying in 30s..."')
+            runner_lines.append('    sleep 30')
+            runner_lines.append('  fi')
+            runner_lines.append('done')
+            runner_lines.append('if [ $_ec -eq 0 ]; then echo ""; echo "DOWNLOAD_OK"; else echo ""; echo "DOWNLOAD_FAILED (exit $_ec after $_attempt attempts)"; fi')
             runner_lines.append(f"rm -f {remote_runner}")
             runner_lines.append('exec "${SHELL:-/bin/bash}"')
             runner_path = TMUX_LOG_DIR / f"{session_id}_run.sh"
@@ -603,15 +639,21 @@ def setup_cookbook_routes() -> APIRouter:
             # Show whether the HF token reached this run (masked) — tells a gated
             # "not authorized" failure apart from a missing token.
             lines.append(_HF_TOKEN_STATUS_SNIPPET)
-            if IS_WINDOWS:
-                # Detached path: no controlling TTY, so skip `< /dev/null`
-                # (handled by Popen stdin=DEVNULL) and don't keep a shell open.
-                lines.append(hf_cmd)
-                lines.append('_ec=$?; if [ $_ec -eq 0 ]; then echo ""; echo "DOWNLOAD_OK"; else echo ""; echo "DOWNLOAD_FAILED (exit $_ec)"; fi')
-            else:
-                # < /dev/null suppresses interactive "update available? [Y/n]" prompt
-                lines.append(f"{hf_cmd} < /dev/null")
-                lines.append('_ec=$?; if [ $_ec -eq 0 ]; then echo ""; echo "DOWNLOAD_OK"; else echo ""; echo "DOWNLOAD_FAILED (exit $_ec)"; fi')
+            # Retry loop — same rationale as the remote-bash path. Issue #2722.
+            _hf_invoke = hf_cmd if IS_WINDOWS else f"{hf_cmd} < /dev/null"
+            lines.append('_max_retries=10; _attempt=0; _ec=0')
+            lines.append('while [ $_attempt -lt $_max_retries ]; do')
+            lines.append('  _attempt=$((_attempt+1))')
+            lines.append(f'  {_hf_invoke}')
+            lines.append('  _ec=$?')
+            lines.append('  if [ $_ec -eq 0 ]; then break; fi')
+            lines.append('  if [ $_attempt -lt $_max_retries ]; then')
+            lines.append('    echo ""; echo "Download attempt $_attempt failed (exit $_ec) — retrying in 30s..."')
+            lines.append('    sleep 30')
+            lines.append('  fi')
+            lines.append('done')
+            lines.append('if [ $_ec -eq 0 ]; then echo ""; echo "DOWNLOAD_OK"; else echo ""; echo "DOWNLOAD_FAILED (exit $_ec after $_attempt attempts)"; fi')
+            if not IS_WINDOWS:
                 lines.append(f"rm -f '{wrapper_script}'")
                 lines.append('exec "${SHELL:-/bin/bash}"')
                 wrapper_script.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -861,6 +903,10 @@ def setup_cookbook_routes() -> APIRouter:
         probing /v1/models and dims the endpoint until the server is reachable,
         so registering immediately (before the server finishes loading) is safe.
         """
+        logger.info(
+            f"_auto_register_llm_endpoint: ENTRY repo_id={req.repo_id!r} "
+            f"remote={remote!r} cmd_prefix={req.cmd[:80]!r}"
+        )
         import re
         from core.database import SessionLocal, ModelEndpoint
 
@@ -885,16 +931,18 @@ def setup_cookbook_routes() -> APIRouter:
         else:
             port = 8080  # llama.cpp's llama-server default — the Apple Silicon path
 
-        # Determine host (mirrors the image path: SSH alias for remote serves).
-        # For local serves while Odysseus runs inside Docker, "localhost"
-        # resolves to the container itself — useless. Use host.docker.internal
-        # which compose maps to the actual host, matching what /setup adds
-        # for Ollama by hand.
+        # Determine host. The cookbook tmux for `local=true` serves runs INSIDE
+        # the odysseus container — so the right URL for the in-container
+        # backend to reach it is `localhost`, NOT `host.docker.internal`
+        # (the latter points at the docker HOST, which doesn't have a server
+        # on that port). The previous host.docker.internal fallback only made
+        # sense for /setup-added external services like systemd Ollama on the
+        # host — and those go through manual setup, not this auto-register
+        # code path. For remote serves we still use the SSH host alias.
         if remote:
             host = remote.split("@")[-1] if "@" in remote else remote
         else:
-            from routes.model_routes import _docker_host_gateway_reachable
-            host = "host.docker.internal" if _docker_host_gateway_reachable() else "localhost"
+            host = "localhost"
 
         base_url = f"http://{host}:{port}/v1"
 
@@ -917,6 +965,34 @@ def setup_cookbook_routes() -> APIRouter:
                     existing.supports_tools = supports_tools
                 db.commit()
                 logger.info(f"Updated existing local model endpoint: {base_url}")
+                # Re-probe so cached_models matches what the server actually
+                # serves right now (the URL may have stayed the same but the
+                # model behind it changed across launches).
+                try:
+                    from routes.model_routes import _probe_endpoint
+                    import json as _json2
+                    probed = _probe_endpoint(base_url, existing.api_key, timeout=5)
+                    if probed:
+                        existing.cached_models = _json2.dumps(probed)
+                        db.commit()
+                except Exception as _pe:
+                    logger.warning(f"Re-probe failed for {base_url}: {_pe!r}")
+                # Sweep stale dupes: other endpoints with the same display name
+                # at DIFFERENT URLs (likely failed earlier-attempt ports) get
+                # deleted so the picker doesn't show an offline ghost next to
+                # the working one. Only sweeps endpoints whose id starts with
+                # `local-` so we never touch a user's hand-added DeepSeek/OpenAI/
+                # etc. entry with a coincidentally matching name.
+                stale = (db.query(ModelEndpoint)
+                         .filter(ModelEndpoint.name == display_name)
+                         .filter(ModelEndpoint.base_url != base_url)
+                         .filter(ModelEndpoint.id.like("local-%"))
+                         .all())
+                for s in stale:
+                    logger.info(f"Sweeping stale local endpoint {s.id} ({s.base_url})")
+                    db.delete(s)
+                if stale:
+                    db.commit()
                 return existing.id
 
             ep_id = f"local-{uuid.uuid4().hex[:8]}"
@@ -932,6 +1008,34 @@ def setup_cookbook_routes() -> APIRouter:
             db.add(ep)
             db.commit()
             logger.info(f"Auto-registered local model endpoint: {display_name} @ {base_url}")
+            # Same sweep on first-register path: drop any pre-existing local-*
+            # endpoints with this display name pointed elsewhere.
+            stale = (db.query(ModelEndpoint)
+                     .filter(ModelEndpoint.name == display_name)
+                     .filter(ModelEndpoint.id != ep_id)
+                     .filter(ModelEndpoint.id.like("local-%"))
+                     .all())
+            for s in stale:
+                logger.info(f"Sweeping stale local endpoint {s.id} ({s.base_url})")
+                db.delete(s)
+            if stale:
+                db.commit()
+            # Probe /v1/models NOW and write cached_models so the chat
+            # picker actually shows the model on the next /api/models
+            # call. Without this immediate probe, the endpoint has empty
+            # cached_models until the next background refresh fires (up
+            # to a minute later) and the picker shows nothing — even
+            # though the endpoint is in the DB and the server is up.
+            try:
+                from routes.model_routes import _probe_endpoint
+                import json as _json2
+                probed = _probe_endpoint(base_url, None, timeout=5)
+                if probed:
+                    ep.cached_models = _json2.dumps(probed)
+                    db.commit()
+                    logger.info(f"Auto-register: probed {len(probed)} models @ {base_url}")
+            except Exception as _pe:
+                logger.warning(f"Auto-register: probe-after-create failed for {base_url}: {_pe!r}")
             return ep_id
         except Exception as e:
             logger.error(f"Failed to auto-register local model endpoint: {e}")
@@ -998,7 +1102,12 @@ def setup_cookbook_routes() -> APIRouter:
         # Otherwise the runner script picks one at runtime and `_auto_register`
         # below still registers the stale 11434 default — which on a host with
         # a systemd ollama lands on the wrong (unreachable-from-docker) service.
-        if "ollama" in req.cmd and "OLLAMA_HOST=" not in req.cmd:
+        # Match "ollama serve" as a phrase (with optional flags after), not
+        # any substring containing "ollama" — otherwise commands like
+        # `docker exec ollama-test ollama-import …` get wrapped as if they
+        # were native `ollama serve`, prepending OLLAMA_HOST=… and then
+        # running the ollama-not-found preflight which exits 127.
+        if re.search(r"\bollama\s+serve\b", req.cmd) and "OLLAMA_HOST=" not in req.cmd:
             _ollama_bind_host = "0.0.0.0" if remote else "127.0.0.1"
             _ollama_chosen_port = _pick_free_port_for_ollama(
                 remote, req.ssh_port, start_port=11434, max_offset=10,
@@ -1160,7 +1269,7 @@ def setup_cookbook_routes() -> APIRouter:
                 runner_lines.append('    ODYSSEUS_PREFLIGHT_EXIT=127')
                 runner_lines.append('  fi')
                 runner_lines.append('fi')
-            elif "ollama" in req.cmd:
+            elif re.search(r"\bollama\s+serve\b", req.cmd):
                 handled_ollama_serve = True
                 _ollama_default_host = "0.0.0.0" if remote else "127.0.0.1"
                 _ollama_host, _ollama_port = _ollama_bind_from_cmd(
@@ -2350,28 +2459,43 @@ def setup_cookbook_routes() -> APIRouter:
                 except Exception:
                     pass
             else:
-                try:
-                    alive = subprocess.run(check_cmd, timeout=10, capture_output=True)
-                    is_alive = alive.returncode == 0
-                except Exception:
+                # Skip the live SSH check entirely for tasks already in a
+                # terminal state — they won't change, and 10s timeouts
+                # stacked per task were the dominant cost of this whole
+                # status endpoint (3+ minute stalls with ~8 accumulated
+                # stopped tasks). The agent's `list_served_models` call
+                # was blocking the chat stream every time.
+                _task_status = (task.get("status") or "").lower()
+                if _task_status in {"stopped", "done", "completed",
+                                    "crashed", "error", "failed",
+                                    "ended", "killed"}:
                     is_alive = False
-
-                # Capture last lines for progress. Prefer the "Downloading" line
-                # (real aggregate bytes) over "Fetching N files" (whole-file count that
-                # lags with hf_transfer). Falls back to the true last line otherwise.
-                if is_alive:
+                    # Keep the persisted output_tail for the UI — it's
+                    # what the agent uses to diagnose past failures.
+                    full_snapshot = (task.get("output") or "")[-12000:]
+                else:
                     try:
-                        cap = subprocess.run(capture_cmd, timeout=10, capture_output=True, text=True)
-                        if cap.returncode == 0:
-                            full_snapshot = cap.stdout.strip()
-                            lines = [l.strip() for l in full_snapshot.split('\n') if l.strip()]
-                            downloading_lines = [l for l in lines if l.startswith("Downloading")]
-                            if downloading_lines:
-                                progress_text = downloading_lines[-1]
-                            elif lines:
-                                progress_text = lines[-1]
+                        alive = subprocess.run(check_cmd, timeout=4, capture_output=True)
+                        is_alive = alive.returncode == 0
                     except Exception:
-                        pass
+                        is_alive = False
+
+                    # Capture last lines for progress. Prefer the "Downloading" line
+                    # (real aggregate bytes) over "Fetching N files" (whole-file count that
+                    # lags with hf_transfer). Falls back to the true last line otherwise.
+                    if is_alive:
+                        try:
+                            cap = subprocess.run(capture_cmd, timeout=4, capture_output=True, text=True)
+                            if cap.returncode == 0:
+                                full_snapshot = cap.stdout.strip()
+                                lines = [l.strip() for l in full_snapshot.split('\n') if l.strip()]
+                                downloading_lines = [l for l in lines if l.startswith("Downloading")]
+                                if downloading_lines:
+                                    progress_text = downloading_lines[-1]
+                                elif lines:
+                                    progress_text = lines[-1]
+                        except Exception:
+                            pass
 
             # Determine status. For the local-Windows detached model the log file
             # persists after the process exits, so a finished download still has a

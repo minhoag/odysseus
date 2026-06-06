@@ -315,8 +315,16 @@ def _resolve_tool_path_in_workspace(workspace: str, raw_path: str) -> str:
 # The user can cancel sooner via the chat stop button — when the
 # SSE stream is torn down, the asyncio task running the subprocess
 # gets cancelled and the subprocess is killed by the finally block.
-DEFAULT_BASH_TIMEOUT = 60 * 60     # 1 hour
-DEFAULT_PYTHON_TIMEOUT = 60 * 60
+# Default 2 min / max 10 min — matches Claude Code's defaults. Old default
+# (1 hour) let the model wedge the chat behind a synchronous `ollama pull` or
+# `pip install`. With these tighter caps the agent learns the failure mode
+# fast and is steered toward `#!bg` for genuinely long jobs (the soft-warn
+# below tells it exactly that). Env-overridable for users who'd rather wait.
+import os as _os
+DEFAULT_BASH_TIMEOUT = int(_os.environ.get("BASH_DEFAULT_TIMEOUT_S", "120"))
+MAX_BASH_TIMEOUT = int(_os.environ.get("BASH_MAX_TIMEOUT_S", "600"))
+DEFAULT_PYTHON_TIMEOUT = int(_os.environ.get("PYTHON_DEFAULT_TIMEOUT_S", "120"))
+MAX_PYTHON_TIMEOUT = int(_os.environ.get("PYTHON_MAX_TIMEOUT_S", "600"))
 
 # How often to push a progress event while a long-running subprocess
 # is still in flight. The frontend cares about "alive" more than
@@ -648,6 +656,34 @@ async def _direct_fallback(
 
     try:
         if tool == "bash":
+            # Reject inline `sleep N` (foreground bash only). Sleeping inside
+            # a bash command blocks the whole chat for N seconds — the user
+            # sees "Thinking…" and rightly asks why the supervisor doesn't
+            # wake up. The supervisor CAN'T wake mid-bash because the bash
+            # call hasn't returned. Force the agent to either (a) end the
+            # turn and let the self-wake check status later, or (b) wrap the
+            # poll in `#!bg` so the wait happens in the background. `#!bg`
+            # bash bodies bypass this check (it's the LEGITIMATE wait path).
+            import re as _re_sleep
+            _is_bg_bash = content.lstrip().startswith("#!bg")
+            if not _is_bg_bash:
+                _sleep_m = _re_sleep.search(r"(?:^|[\s|&;()])sleep\s+\d", content)
+                if _sleep_m:
+                    return {
+                        "error": (
+                            "Rejected: this bash uses `sleep N` foreground. "
+                            "That blocks the chat for N seconds with no progress "
+                            "visible to the user. Instead, do ONE of:\n"
+                            "  (a) End the turn now — the self-wake supervisor "
+                            "will re-enter the session and re-check status "
+                            "automatically (no manual sleep needed).\n"
+                            "  (b) If you really must poll inline, prefix the "
+                            "whole bash block with `#!bg` on its own line — that "
+                            "runs it in the background and auto-resumes you when "
+                            "done. Then call list_served_models / curl normally."
+                        ),
+                        "exit_code": 1,
+                    }
             proc = await asyncio.create_subprocess_shell(
                 content,
                 stdout=asyncio.subprocess.PIPE,
@@ -661,7 +697,20 @@ async def _direct_fallback(
                 progress_cb=progress_cb,
             )
             if timed_out:
-                return {"error": f"bash: timed out after {DEFAULT_BASH_TIMEOUT}s — process killed", "exit_code": 124, "stdout": _truncate(stdout, MAX_OUTPUT_CHARS), "stderr": _truncate(stderr, MAX_OUTPUT_CHARS)}
+                return {
+                    "error": (
+                        f"bash: timed out after {DEFAULT_BASH_TIMEOUT}s and was killed. "
+                        f"This means the command needs longer than the default {DEFAULT_BASH_TIMEOUT}s. "
+                        f"Don't just retry the same way. RE-RUN IT IN THE BACKGROUND: add `#!bg` as "
+                        f"the FIRST line of the bash block. You'll get a job id immediately and be "
+                        f"auto-resumed when it finishes — the chat won't freeze again. Use #!bg for "
+                        f"anything that may run >20s (pip/npm installs, model downloads/serves, "
+                        f"ffmpeg, builds, training, ssh ... <long cmd>)."
+                    ),
+                    "exit_code": 124,
+                    "stdout": _truncate(stdout, MAX_OUTPUT_CHARS),
+                    "stderr": _truncate(stderr, MAX_OUTPUT_CHARS),
+                }
             output = stdout.rstrip()
             err = stderr.rstrip()
             if err:
@@ -688,7 +737,17 @@ async def _direct_fallback(
                 progress_cb=progress_cb,
             )
             if timed_out:
-                return {"error": f"python: timed out after {DEFAULT_PYTHON_TIMEOUT}s — process killed", "exit_code": 124, "stdout": _truncate(stdout, MAX_OUTPUT_CHARS), "stderr": _truncate(stderr, MAX_OUTPUT_CHARS)}
+                return {
+                    "error": (
+                        f"python: timed out after {DEFAULT_PYTHON_TIMEOUT}s and was killed. "
+                        f"For genuinely long computations, prefer a bash block with `#!bg` as the "
+                        f"first line so the chat doesn't freeze (you'll get a job id and be "
+                        f"auto-resumed when it finishes)."
+                    ),
+                    "exit_code": 124,
+                    "stdout": _truncate(stdout, MAX_OUTPUT_CHARS),
+                    "stderr": _truncate(stderr, MAX_OUTPUT_CHARS),
+                }
             output = stdout.rstrip()
             err = stderr.rstrip()
             if err:

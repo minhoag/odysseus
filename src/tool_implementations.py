@@ -3037,8 +3037,34 @@ async def do_serve_model(content: str, owner: Optional[str] = None) -> Dict:
         args = _parse_tool_args(content)
     except ValueError:
         return {"error": "Invalid JSON arguments", "exit_code": 1}
-    repo_id = args.get("repo_id", "")
-    cmd = args.get("cmd", "")
+    repo_id = (args.get("repo_id") or "").strip()
+    cmd = (args.get("cmd") or "").strip()
+    # Auto-fill cmd from repo_id when the model omits it (weak models often
+    # know the intent but can't construct the command). Picks the binary by
+    # repo name: GGUF repos → llama-server, ollama tags → ollama serve, AWQ
+    # or HF transformers → vllm serve. Better to attempt a sane default than
+    # bounce the agent with "repo_id and cmd are required" three times.
+    if repo_id and not cmd:
+        _rid = repo_id.lower()
+        if _rid.endswith("-gguf") or "gguf" in _rid or _rid.endswith(".gguf"):
+            # llama-server with --jinja (use the chat template embedded in
+            # the GGUF — critical for newer models like Gemma 4 where the
+            # built-in shorthand templates like `--chat-template gemma`
+            # don't know the right EOS tokens and the model generates
+            # forever, producing the "It looks like your message cut off"
+            # repetition loop). -np 1 forces a single slot so a probe and
+            # a chat request can't share KV state.
+            cmd = (
+                f"llama-server --hf-repo {repo_id} --host 0.0.0.0 "
+                "--port 8000 --jinja -np 1 --n-gpu-layers 99"
+            )
+        elif ":" in repo_id and not repo_id.startswith("http"):
+            # ollama-style tag (e.g. qwen2.5:0.5b, gpt-oss:20b)
+            cmd = "OLLAMA_HOST=0.0.0.0:11434 ollama serve"
+        else:
+            # HF transformers / AWQ / regular repo → vllm
+            cmd = f"vllm serve {repo_id} --host 0.0.0.0 --port 8000"
+        logger.info(f"do_serve_model: auto-filled cmd for {repo_id!r} → {cmd!r}")
     if not repo_id or not cmd:
         return {"error": "repo_id and cmd are required", "exit_code": 1}
     host = (args.get("host") or "").strip()
@@ -3650,7 +3676,7 @@ async def do_adopt_served_model(content: str, owner: Optional[str] = None) -> Di
                 ep_result = await do_manage_endpoints(json.dumps({
                     "action": "add",
                     "name": display_name,
-                    "endpoint_url": endpoint_url,
+                    "base_url": endpoint_url,
                     "is_local": False,
                 }), owner=owner)
                 if isinstance(ep_result, dict) and not ep_result.get("error"):

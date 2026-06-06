@@ -438,6 +438,12 @@ _SERVE_CMD_ALLOWLIST = {
     "python", "python3",
     "sglang", "lmdeploy",
     "node", "npx",
+    # `docker exec <container> …` for delegating to a pre-built
+    # iGPU/ROCm/CUDA ollama container on hosts where ollama isn't on PATH
+    # but a running container holds the runtime. The follow-on token after
+    # `docker` is unconstrained by this allowlist (the docker daemon is the
+    # gate); the validator's no-`;&&||$(` rule still applies.
+    "docker",
 }
 
 

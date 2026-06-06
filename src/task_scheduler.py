@@ -1022,6 +1022,14 @@ class TaskScheduler:
             # through as `command` so action_cookbook_serve can json.loads it.
             elif task.action == "cookbook_serve" and task.prompt:
                 kwargs["command"] = task.prompt
+            # ping_chat_session needs the target session id (stored on the
+            # task row) and the optional injected prompt. Without this both
+            # args land as None and the action errors out with
+            # "missing session_id" right after firing.
+            elif task.action == "ping_chat_session":
+                kwargs["session_id"] = task.session_id or ""
+                if task.prompt:
+                    kwargs["prompt"] = task.prompt
             result, success = await action_fn(**kwargs)
             return result, success
         except TaskNoop:
