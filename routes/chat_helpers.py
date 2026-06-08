@@ -14,7 +14,7 @@ from core.database import Session as DBSession, ModelEndpoint
 from src.llm_core import normalize_model_id
 from src.endpoint_resolver import normalize_base
 from src.context_compactor import maybe_compact, trim_for_context
-from src.auth_helpers import get_current_user
+from src.auth_helpers import get_current_user, effective_user
 from src.prompt_security import untrusted_context_message
 from routes.prefs_routes import _load_for_user as load_prefs_for_user
 
@@ -474,8 +474,12 @@ async def build_chat_context(
     if not incognito:
         fire_message_event(request, webhook_manager, session_id, sess, message, compare_mode)
 
-    # Resolve user prefs
-    user = get_current_user(request)
+    # Resolve user prefs. effective_user collapses bearer-token callers down
+    # to the real human owner of the api token, so tool_security treats them
+    # as the admin they actually are (otherwise blocked_tools_for_owner("api")
+    # blocks download_model / serve_model / bash / etc. and the agent gets a
+    # useless read-only toolset).
+    user = effective_user(request) or get_current_user(request)
     uprefs = load_prefs_for_user(user)
 
     # Memory enabled?

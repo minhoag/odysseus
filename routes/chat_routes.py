@@ -22,7 +22,7 @@ from src.chat_helpers import coerce_message_and_session
 from src.endpoint_resolver import normalize_base as _normalize_base, build_chat_url
 from src.prompt_security import untrusted_context_message
 from core.exceptions import SessionNotFoundError
-from src.auth_helpers import get_current_user
+from src.auth_helpers import get_current_user, effective_user
 from routes.session_routes import _verify_session_owner
 from routes.document_helpers import _owner_session_filter
 from core.database import SessionLocal, get_session_mode, set_session_mode
@@ -439,7 +439,38 @@ def setup_chat_routes(
             # but BEFORE loading. Prevents cross-user session hijack.
             _verify_session_owner(request, session)
             sess = session_manager.get_session(session)
-            owner = get_current_user(request)
+            # New user message supersedes any in-flight wake (timer or
+            # cookbook-continuation) for this session. Without this, a
+            # bg_monitor wake for an old download fires CONCURRENTLY with
+            # this new turn, both write to the same agent_runs._Run, and
+            # the user sees their "Yo" reply tangled with download-status
+            # text from the old task. Cancel pending recs so bg_monitor
+            # skips them on its next poll.
+            try:
+                from src import agent_continuations as _ac
+                _cancelled = _ac.cancel_for_session(session)
+                if _cancelled:
+                    logger.info(f"[chat_stream] cancelled {_cancelled} pending wakes for {session}")
+            except Exception as _ce:
+                logger.warning(f"[chat_stream] cancel pending wakes failed: {_ce!r}")
+            # Also cancel any in-flight wake-run for this session. The pending
+            # rec cancel above stops bg_monitor from FIRING new wakes, but a
+            # wake that's already running (its agent_runs task is alive)
+            # would keep running and write events to the same session. Stop
+            # the task so the chat reply is the only stream the user sees.
+            try:
+                from src import agent_runs as _ar
+                if _ar.stop(session):
+                    logger.info(f"[chat_stream] stopped in-flight wake run for {session}")
+            except Exception as _se:
+                logger.warning(f"[chat_stream] stop wake run failed: {_se!r}")
+            # Use effective_user so bearer-token (ody_) callers are attributed to
+            # the token's owner (a real human admin), not the sandboxed "api"
+            # pseudo-user. Without this, tool_security.blocked_tools_for_owner
+            # treats every token-authed agent call as a non-admin and blocks
+            # download_model / serve_model / bash / write_file / etc., leaving
+            # the agent with a useless read-only toolset.
+            owner = effective_user(request) or get_current_user(request)
             if _clear_orphaned_session_endpoint(sess, owner=owner):
                 raise HTTPException(400, "Selected model endpoint was removed. Pick another model in Settings.")
             # Issue #587: picker shows a model from the endpoint cache but
@@ -1035,6 +1066,21 @@ def setup_chat_routes(
                                     "doc_stream_open", "doc_stream_delta",
                                     "doc_update", "doc_suggestions", "ui_control",
                                     "rounds_exhausted",
+                                    # Checklist / countdown events for the
+                                    # always-visible task UI. Without these
+                                    # the card + countdown chip never render
+                                    # because the agent loop emits them but
+                                    # this allowlist drops them silently.
+                                    "task_checklist", "task_completed",
+                                    "continuation_wait", "agent_notice",
+                                    "supervisor_step", "tool_progress",
+                                    # Live bg_task progress (download %, ETA,
+                                    # tail) pushed into the agent_runs buffer
+                                    # by src/bg_task_progress.py — needed so
+                                    # the user sees download progress live
+                                    # while the original turn waits for the
+                                    # wake to fire.
+                                    "bg_task_progress",
                                 ):
                                     if data.get("type") == "agent_step":
                                         _agent_rounds = max(_agent_rounds, data.get("round", 1))
@@ -1057,6 +1103,15 @@ def setup_chat_routes(
                         elif chunk.startswith("event: "):
                             yield chunk
                         elif chunk == "data: [DONE]\n\n":
+                            # Save the assistant reply synchronously (cheap —
+                            # in-memory + JSON dump) so message_saved can be
+                            # emitted before [DONE]. The HEAVY post-response
+                            # tasks (memory extraction + skill extraction +
+                            # webhooks — can run 5-15 s) used to also run
+                            # synchronously here, which kept the SSE stream
+                            # open and made the user think the chat "was
+                            # still going" after the reply was complete.
+                            # Move them to a fire-and-forget background task.
                             if full_response:
                                 _saved_id = save_assistant_response(
                                     sess, session_manager, session, full_response, last_metrics,
@@ -1068,17 +1123,55 @@ def setup_chat_routes(
                                 )
                                 if _saved_id:
                                     yield f'data: {json.dumps({"type": "message_saved", "id": _saved_id})}\n\n'
-                                run_post_response_tasks(
-                                    sess, session_manager, session, message, full_response,
-                                    last_metrics, ctx.uprefs, memory_manager, memory_vector, webhook_manager,
-                                    incognito=incognito, compare_mode=compare_mode,
+                                # Background post-processing — capture all the
+                                # locals it needs by value so the closure
+                                # doesn't read mutated state after we return.
+                                _bg_args = dict(
+                                    sess=sess, session_manager=session_manager,
+                                    session=session, message=message,
+                                    full_response=full_response,
+                                    last_metrics=last_metrics,
+                                    uprefs=ctx.uprefs,
+                                    memory_manager=memory_manager,
+                                    memory_vector=memory_vector,
+                                    webhook_manager=webhook_manager,
+                                    incognito=incognito,
+                                    compare_mode=compare_mode,
                                     character_name=ctx.preset.character_name,
-                                                            agent_rounds=_agent_rounds,
+                                    agent_rounds=_agent_rounds,
                                     agent_tool_calls=_agent_tool_calls,
                                     skills_manager=skills_manager,
                                     owner=_user,
                                     extract_skills=user_requested_agent,
                                 )
+                                # Plain background Thread — no event loop needed
+                                # so this can't fail with "no running event loop"
+                                # when the chat_stream coroutine's task is winding
+                                # down. run_post_response_tasks is sync anyway.
+                                import threading as _th
+                                def _bg_post_sync() -> None:
+                                    try:
+                                        run_post_response_tasks(
+                                            _bg_args["sess"], _bg_args["session_manager"],
+                                            _bg_args["session"], _bg_args["message"],
+                                            _bg_args["full_response"], _bg_args["last_metrics"],
+                                            _bg_args["uprefs"], _bg_args["memory_manager"],
+                                            _bg_args["memory_vector"], _bg_args["webhook_manager"],
+                                            incognito=_bg_args["incognito"],
+                                            compare_mode=_bg_args["compare_mode"],
+                                            character_name=_bg_args["character_name"],
+                                            agent_rounds=_bg_args["agent_rounds"],
+                                            agent_tool_calls=_bg_args["agent_tool_calls"],
+                                            skills_manager=_bg_args["skills_manager"],
+                                            owner=_bg_args["owner"],
+                                            extract_skills=_bg_args["extract_skills"],
+                                        )
+                                    except Exception as _pe:
+                                        logger.warning(f"post-response tasks failed: {_pe!r}")
+                                try:
+                                    _th.Thread(target=_bg_post_sync, daemon=True, name="post-response").start()
+                                except Exception as _se:
+                                    logger.warning(f"post-response thread spawn failed: {_se!r}")
                             _stream_set(session, status="done")
                             yield chunk
                 except (asyncio.CancelledError, GeneratorExit):
@@ -1125,7 +1218,14 @@ def setup_chat_routes(
     @router.get("/api/chat/resume/{session_id}")
     async def chat_resume(request: Request, session_id: str) -> StreamingResponse:
         _verify_session_owner(request, session_id)
-        if not agent_runs.is_active(session_id):
+        # Allow a subscribe whenever the agent_runs record exists — running OR
+        # recently-finished (within the 180s eviction grace). A wake-run can
+        # complete in under a minute on a quick download/serve, and was going
+        # 404 here because is_active() only returns True for status=='running'.
+        # subscribe() itself handles both cases: it replays the buffer and, if
+        # status is no longer running, returns instead of waiting for events.
+        status = agent_runs.get_status(session_id)
+        if status is None:
             raise HTTPException(404, "No active run for this session")
         return StreamingResponse(agent_runs.subscribe(session_id), media_type="text/event-stream")
 
@@ -1138,6 +1238,17 @@ def setup_chat_routes(
         _verify_session_owner(request, session_id)
         stopped = agent_runs.stop(session_id)
         return {"stopped": stopped}
+
+    @router.post("/api/chat/continue/{session_id}")
+    async def chat_continue(request: Request, session_id: str) -> Dict[str, Any]:
+        """Skip the wait — push every pending continuation for this session
+        to due_at=now so bg_monitor fires it on the next poll (~2 s).
+        Called by the "Continue now" button on the countdown chip when the
+        user doesn't want to wait the remaining N minutes."""
+        _verify_session_owner(request, session_id)
+        from src import agent_continuations as _ac
+        n = _ac.fire_now_for_session(session_id)
+        return {"fired": n}
 
     # ------------------------------------------------------------------ #
     # GET /api/chat/stream_status — check if a stream is active for a session
@@ -1152,12 +1263,43 @@ def setup_chat_routes(
         # entry in between (same pattern _stream_set already uses).
         rec = _active_streams.get(session_id)
         if rec is None:
-            if agent_runs.is_active(session_id):
+            # is_active is True only while running; expand to ANY existing run
+            # (including recently-finished ones inside the eviction grace) so
+            # the frontend's resume retry can still replay the buffer.
+            _ar_status = agent_runs.get_status(session_id)
+            if _ar_status == "running":
                 return {"status": "streaming", "detached": True}
+            if _ar_status in ("done", "stopped", "error"):
+                return {"status": "finished", "detached": True, "run_status": _ar_status}
             raise HTTPException(404, "No active stream for this session")
         return rec
 
     # ------------------------------------------------------------------ #
+    # POST /api/chat/inject — terminal-agent-style mid-stream message queue
+    # ------------------------------------------------------------------ #
+    @router.post("/api/chat/inject/{session_id}")
+    async def chat_inject(request: Request, session_id: str, message: str = Form(...)) -> Dict[str, Any]:
+        """Queue a message for the next round of an in-flight agent stream.
+
+        Unlike /api/inject_context (which persists to chat history), this
+        queue is ephemeral. The agent loop drains it at the start of each
+        round and injects the messages as user-role context. Lets the user
+        course-correct the agent mid-task without ending the current turn."""
+        _verify_session_owner(request, session_id)
+        from src import chat_inject
+        rec = await chat_inject.push(session_id, message)
+        if not rec:
+            raise HTTPException(400, "empty message")
+        return {"status": "queued", "queued_at": rec["ts"], "preview": rec["text"][:140]}
+
+    @router.get("/api/chat/inject/{session_id}")
+    async def chat_inject_peek(request: Request, session_id: str) -> Dict[str, Any]:
+        """Snapshot of the queue (for UI showing pending injects)."""
+        _verify_session_owner(request, session_id)
+        from src import chat_inject
+        msgs = await chat_inject.peek(session_id)
+        return {"queued": msgs, "count": len(msgs)}
+
     # POST /api/inject_context
     # ------------------------------------------------------------------ #
     @router.post("/api/inject_context/{session_id}")

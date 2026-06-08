@@ -15,11 +15,14 @@ import json
 import logging
 
 from src import bg_jobs
+from src import agent_continuations
 
 logger = logging.getLogger(__name__)
 
 _monitor_task = None
-POLL_INTERVAL_S = 5
+POLL_INTERVAL_S = 2  # Lower = tighter coupling between countdown chip end
+                     # and wake firing, so the frontend doesn't have to retry
+                     # 5+ times. Cost is negligible (a dict scan).
 # The follow-up agent run is allowed a few rounds to actually continue the task
 # (e.g. after `pip install` finishes, run the transcription).
 _FOLLOWUP_MAX_ROUNDS = 12
@@ -30,9 +33,52 @@ async def _drain_agent(sess, messages):
     (final_prose, tool_events) — tool_events in the same shape the live chat
     saves, so the frontend rebuilds them as standard agent-thread tool cards."""
     from src.agent_loop import stream_agent_loop
+    from src import agent_runs
     full = ""
     tool_events = []
     round_num = 1
+
+    async def _collecting_stream():
+        nonlocal full, tool_events, round_num
+        async for chunk in stream_agent_loop(
+            sess.endpoint_url, sess.model, messages,
+            headers=getattr(sess, "headers", None),
+            context_length=getattr(sess, "context_length", 0) or 0,
+            session_id=sess.id,
+            max_rounds=_FOLLOWUP_MAX_ROUNDS,
+            owner=getattr(sess, "owner", None),
+            _from_wake=True,
+        ):
+            if chunk.startswith("data: "):
+                body = chunk[6:].strip()
+                if body and body != "[DONE]":
+                    try:
+                        d = json.loads(body)
+                    except (ValueError, TypeError):
+                        d = None
+                    if isinstance(d, dict):
+                        if "delta" in d:
+                            delta = d.get("delta")
+                            if isinstance(delta, str):
+                                full += delta
+                        elif d.get("type") == "agent_step":
+                            round_num = d.get("round", round_num)
+                        elif d.get("type") == "tool_output":
+                            # Mirror the live chat's tool_event shape.
+                            tool_events.append({
+                                "round": round_num,
+                                "tool": d.get("tool"),
+                                "command": d.get("command"),
+                                "output": d.get("output"),
+                                "exit_code": d.get("exit_code"),
+                            })
+            yield chunk
+
+    run = agent_runs.start(sess.id, _collecting_stream())
+    if run.task:
+        await run.task
+    return full, tool_events
+
     async for chunk in stream_agent_loop(
         sess.endpoint_url, sess.model, messages,
         headers=getattr(sess, "headers", None),
@@ -130,6 +176,189 @@ async def _run_followup(rec: dict) -> bool:
     return True
 
 
+async def _fetch_cookbook_task_status() -> list:
+    import httpx
+    from src.tool_implementations import _COOKBOOK_BASE, _internal_headers
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.get(
+            f"{_COOKBOOK_BASE}/api/cookbook/tasks/status",
+            headers=_internal_headers(),
+        )
+        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+    tasks = data.get("tasks") if isinstance(data, dict) else []
+    return tasks if isinstance(tasks, list) else []
+
+
+async def _run_cookbook_continuation(rec: dict, task: dict) -> bool:
+    from src.ai_interaction import get_session_manager
+    from core.models import ChatMessage
+
+    sm = get_session_manager()
+    if not sm:
+        return False
+    try:
+        sess = sm.get_session(rec["session_id"])
+    except KeyError:
+        logger.info("cookbook-continuation: session %s gone for %s", rec.get("session_id"), rec.get("id"))
+        return True
+    if not sess:
+        logger.info("cookbook-continuation: session %s gone for %s", rec.get("session_id"), rec.get("id"))
+        return True
+    try:
+        from src import agent_runs
+        if agent_runs.is_active(sess.id):
+            return False
+    except Exception:
+        pass
+
+    status = task.get("status") or "unknown"
+    ctype = rec.get("cookbook_type") or task.get("type") or "cookbook"
+    cid = rec.get("cookbook_session_id") or task.get("session_id")
+    output_tail = task.get("output_tail") or task.get("progress") or ""
+    hint = rec.get("next_hint") or ""
+    inject = (
+        f"[Cookbook continuation]\n\n"
+        f"Cookbook {ctype} task {cid} reached status: {status}.\n"
+        f"Model/task: {task.get('model') or ''}\n"
+        f"Progress/output:\n{output_tail or '(no output)'}\n\n"
+        f"Continuation hint: {hint or 'Continue the original user request checklist.'}\n\n"
+        "Continue the original user request from this state. Do not repeat work "
+        "that is already complete. If a download completed and the user asked to "
+        "serve it, start serving now. If serving is ready, give the final result. "
+        "If the Cookbook task failed or stopped, tell the user the concrete error."
+    )
+    context = sess.get_context_messages()
+    context.append({"role": "user", "content": inject})
+    full, tool_events = await _drain_agent(sess, context)
+    sm.add_message(sess.id, ChatMessage(
+        "assistant",
+        full or "(no visible continuation response)",
+        metadata={
+            "tool_events": tool_events,
+            "model": sess.model,
+            "agent_continuation_id": rec["id"],
+            "cookbook_session_id": cid,
+            "cookbook_status": status,
+        },
+    ))
+    sm.save_sessions()
+    logger.info(
+        "cookbook-continuation: auto-continued session %s for %s status=%s (%d chars, %d tools)",
+        sess.id,
+        cid,
+        status,
+        len(full),
+        len(tool_events),
+    )
+    return True
+
+
+async def _drain_cookbook_continuations() -> None:
+    pending = agent_continuations.pending_cookbook()
+    if not pending:
+        return
+    try:
+        tasks = await _fetch_cookbook_task_status()
+    except Exception as e:
+        logger.warning("cookbook-continuation: status fetch failed: %s", e)
+        return
+    by_sid = {
+        t.get("session_id"): t
+        for t in tasks
+        if isinstance(t, dict) and t.get("session_id")
+    }
+    terminal = {"completed", "done", "ready", "error", "failed", "stopped", "crashed", "killed"}
+    for rec in pending:
+        task = by_sid.get(rec.get("cookbook_session_id"))
+        if not task:
+            continue
+        status = (task.get("status") or "").lower()
+        if status not in terminal:
+            continue
+        try:
+            if await _run_cookbook_continuation(rec, task):
+                agent_continuations.mark_followed_up(rec["id"])
+        except Exception as e:
+            logger.warning("cookbook-continuation failed for %s: %s", rec.get("id"), e)
+
+
+async def _run_timer_continuation(rec: dict) -> bool:
+    from src.ai_interaction import get_session_manager
+    from core.models import ChatMessage
+
+    sm = get_session_manager()
+    if not sm:
+        return False
+    # session_manager.get_session raises KeyError when the session is gone.
+    # Treat that as "nothing to continue" and return True so the caller marks
+    # the rec as followed_up — otherwise bg_monitor keeps retrying every
+    # ~3 seconds forever (visible as "Session X not found" log spam).
+    try:
+        sess = sm.get_session(rec["session_id"])
+    except KeyError:
+        logger.info("timer-continuation: session %s gone for %s", rec.get("session_id"), rec.get("id"))
+        return True
+    if not sess:
+        logger.info("timer-continuation: session %s gone for %s", rec.get("session_id"), rec.get("id"))
+        return True
+    try:
+        from src import agent_runs
+        if agent_runs.is_active(sess.id):
+            return False
+    except Exception:
+        pass
+
+    checklist = rec.get("checklist") if isinstance(rec.get("checklist"), list) else []
+    checklist_text = ""
+    if checklist:
+        try:
+            checklist_text = "\n\nCurrent checklist state:\n" + json.dumps(checklist, ensure_ascii=False, indent=2)
+        except Exception:
+            checklist_text = ""
+
+    inject = (
+        "[Timer continuation]\n\n"
+        "The requested wait period has elapsed.\n\n"
+        f"Continuation hint: {rec.get('next_hint') or 'Continue the original user request checklist.'}"
+        f"{checklist_text}\n\n"
+        "Continue the original user request from this state. Check current status with the appropriate named tools first "
+        "(list_downloads, list_served_models, manage_endpoints for model tasks). "
+        "Do not repeat completed work. If the task is complete, give the final result."
+    )
+    context = sess.get_context_messages()
+    context.append({"role": "user", "content": inject})
+    full, tool_events = await _drain_agent(sess, context)
+    sm.add_message(sess.id, ChatMessage(
+        "assistant",
+        full or "(no visible timer continuation response)",
+        metadata={
+            "tool_events": tool_events,
+            "model": sess.model,
+            "agent_continuation_id": rec["id"],
+            "continuation_kind": "timer",
+        },
+    ))
+    sm.save_sessions()
+    logger.info(
+        "timer-continuation: auto-continued session %s for %s (%d chars, %d tools)",
+        sess.id,
+        rec.get("id"),
+        len(full),
+        len(tool_events),
+    )
+    return True
+
+
+async def _drain_timer_continuations() -> None:
+    for rec in agent_continuations.due_timers():
+        try:
+            if await _run_timer_continuation(rec):
+                agent_continuations.mark_followed_up(rec["id"])
+        except Exception as e:
+            logger.warning("timer-continuation failed for %s: %s", rec.get("id"), e)
+
+
 async def _loop():
     while True:
         try:
@@ -140,6 +369,8 @@ async def _loop():
                 except Exception as e:
                     # Idempotent: leave followed_up=False so the next tick retries.
                     logger.warning("bg-followup failed for %s (will retry): %s", rec.get("id"), e)
+            await _drain_cookbook_continuations()
+            await _drain_timer_continuations()
         except Exception as e:
             logger.warning("bg-monitor tick error: %s", e)
         await asyncio.sleep(POLL_INTERVAL_S)

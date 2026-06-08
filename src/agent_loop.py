@@ -8,6 +8,7 @@ The LLM decides when to use tools by writing fenced code blocks.
 
 import asyncio
 import collections
+import hashlib
 import json
 import threading
 import re
@@ -179,12 +180,9 @@ TOOL_SECTIONS = {
 ```
 Run any shell command. Output is returned to you. Use for: installing packages, checking files, git, curl, system info, etc.
 NEVER use bash to create or change files — no `>`/`>>` redirects, no heredocs (`cat > f << 'EOF'`), no `tee`, `sed -i`, `awk -i`, no `python -c` that writes. To CREATE or fully rewrite a file use `write_file`; to change part of an existing file use `edit_file`. Those show a diff and are the ONLY allowed way to write files. (bash is for read-only inspection: `ls`, `cat` to READ, `grep`, `git status`/`git diff`, builds, installs.)
-NEVER chain `sleep N && curl ...` inline. Sleep blocks the whole chat — the user sees "Thinking" for N seconds with no progress. To wait for a server to come up, end the current turn after launching it; the next turn (or a self-wake) will check status. If you absolutely must poll inside one turn, use `#!bg` so it runs in the background.
-For LONG-running commands (anything that may take more than ~20s), the FIRST line MUST be `#!bg`. You get a job id back immediately and are automatically re-invoked with the full output when it finishes — so you never block the chat waiting. ALWAYS use `#!bg` for: `pip install`, `npm install`, `apt`, `pacman`, `brew`, `ollama pull`, `ollama run`, `hf download`, `huggingface-cli download`, `aria2c`, `wget` / `curl` of large files, `ffmpeg`, `make`, builds, training jobs, model serves (`vllm serve`, `ollama serve`), `ssh ... <any of the above>` — and ANY ssh command you don't already know will return in seconds. If you forget `#!bg` on a long command, the user's chat will appear to freeze. Example:
-```bash
-#!bg
-ssh pewds@192.168.1.12 "OLLAMA_HOST=0.0.0.0:8000 ollama pull qwen2.5:0.5b"
-```
+NEVER chain `sleep N && ...` inline. Sleep blocks the chat. If the user asks to wait, use the app's chat timer/timed continuation path, not bash sleep.
+NEVER use bash for Cookbook/model lifecycle work. Do not run `ollama pull`, `ollama serve`, `ollama list`, `vllm serve`, `llama-server`, `hf download`, or HuggingFace downloads through bash. Use the named model tools instead: `download_model`, `serve_model`, `list_downloads`, `list_served_models`, and `manage_endpoints`. These are what make Cookbook progress, chat timers, and model-picker registration work.
+For unrelated long-running shell commands, prefer a proper app/tool integration. Do not use `#!bg` for model downloads, model serves, or user-requested waits.
 SANDBOX LIMITS: stdin/stdout are pipes, so there is NO interactive terminal — `input()`, `curses`, `termios`, `pygame`, and `tkinter` will all fail. Don't try to RUN interactive terminal games or GUI apps here — verify syntax (`python -c "import py_compile; py_compile.compile('x.py')"`) and tell the user to run it themselves in their own terminal. For anything the USER should play/use interactively (games, UIs, demos), prefer a single self-contained HTML file with `<canvas>` + inline JS — save it via `create_document` with language="html" and tell the user to hit the Run / Preview button (▶) in the document editor toolbar; it renders inline in a sandboxed iframe so the game is playable right there. Works from any machine that can reach the Odysseus UI — no need to copy files out.
 NEVER pipe multi-line Python through `python -c "..."` — shell quoting eats real newlines and `\\n` arrives as literal backslash-n, which Python parses as a line-continuation error on line 1. To run multi-line code, either use the dedicated `python` tool block above, or save to a file first with a quoted HEREDOC (`cat > /tmp/x.py << 'EOF' ... EOF`) and then `python /tmp/x.py`.""",
 
@@ -340,12 +338,12 @@ If the user asks for a reminder/alarm before the event, pass `reminder_minutes` 
     "list_served_models": "- ```list_served_models``` — Show what the Cookbook (LLM-serving subsystem) is currently running. NO args. Use this for ANY 'what's running' / 'what's serving' / 'show my cookbook' / 'is anything up' query. DO NOT shell out (`ps aux`, `docker ps`, etc.) — this tool is the source of truth. Failed serve tasks include recent logs plus diagnosis/retry suggestions; use those suggestions to call `serve_model` again with an adjusted command when appropriate.",
     "stop_served_model": "- ```stop_served_model``` — Stop a running model server. Args (JSON): {\"session_id\": \"<from list_served_models>\"}. Use for 'kill my cookbook' / 'stop the model' / 'shut down vLLM'.",
     "tail_serve_output": "- ```tail_serve_output``` — Read the actual tmux stderr/traceback of a CURRENTLY failing cookbook task. Args (JSON): {\"session_id\": \"<from list_served_models>\", \"tail\": 150?}. **Use ONLY after** you just launched something via `serve_model` AND `list_served_models` reports YOUR new task as `crashed`/`error`. DO NOT use it on old stopped/completed download tasks (they're historical noise — won't predict whether a new launch succeeds). DO NOT call it before launching a fresh attempt. When you do call it, bump `tail` to 400+ only if the visible error references 'see root cause above'.",
-    "download_model": "- ```download_model``` — Download a HuggingFace model. Args (JSON): {\"repo_id\": \"Qwen/Qwen3-8B\", \"host\": \"user@gpu-box\"?, \"include\": \"*Q4_K_M*\"?}.",
+    "download_model": "- ```download_model``` — Download a HuggingFace model or pull an Ollama tag. Args (JSON): {\"repo_id\": \"<org>/<model>\", \"host\": \"<server-name>\"?, \"include\": \"*Q4_K_M*\"?} or for Ollama {\"repo_id\": \"<model>:<tag>\", \"backend\": \"ollama\", \"host\": \"<server-name>\"?}. `host` accepts the Cookbook server name (call list_cookbook_servers to see what's configured); omit for the default/local server.",
     "serve_model": "- ```serve_model``` — Start serving a model with vLLM / SGLang / llama.cpp / Ollama / Diffusers. Args (JSON): {\"repo_id\": \"...\", \"cmd\": \"vllm serve ... --port 8000\" or \"python3 -m sglang.launch_server ... --port 30000\" or \"python3 scripts/diffusion_server.py --model diffusers/stable-diffusion-xl-1.0-inpainting-0.1 --port 8100\", \"host\": \"user@gpu-box\"?}. For image/inpaint/diffusion models, use the `scripts/diffusion_server.py` command exactly. After launch, call `list_served_models`; if it returns a diagnosis with an adjusted command, retry with that command.",
     "list_downloads": "- ```list_downloads``` — Show in-progress HuggingFace model downloads (filters Cookbook tasks/status to downloads only). NO args. Use for 'what's downloading' / 'show my downloads' / 'check download progress'.",
     "cancel_download": "- ```cancel_download``` — Cancel an in-progress download. Args (JSON): {\"session_id\": \"<from list_downloads>\"}. Use for 'cancel the download' / 'kill the download'.",
     "search_hf_models": "- ```search_hf_models``` — Search HuggingFace for models. Args (JSON): {\"query\": \"qwen 8b\", \"limit\": 10?}. Use for 'find a model for X' / 'search huggingface' / 'what models are there for Y'.",
-    "list_cached_models": "- ```list_cached_models``` — List models already on disk. Args (JSON, all optional): {\"host\": \"ajax or user@gpu-box\"?, \"model_dir\": \"/data/models,/extra\"?}. Friendly Cookbook server names work. Use for 'what models do I have' / 'show cached models' / 'is X downloaded'.",
+    "list_cached_models": "- ```list_cached_models``` — List models already on disk. Args (JSON, all optional): {\"host\": \"<server-name>\"?, \"model_dir\": \"<absolute path or csv of paths>\"?}. Friendly Cookbook server names work (call list_cookbook_servers to see configured names). Use for 'what models do I have' / 'show cached models' / 'is X downloaded'.",
     "app_api": """\
 ```app_api
 {"action": "call", "method": "GET", "path": "/api/cookbook/gpus"}
@@ -859,7 +857,12 @@ def _build_system_prompt(
             _skills_on = _prefs.get("skills_enabled", True)
         except Exception:
             pass
-        if last_user and _skills_on:
+        _model_lifecycle_request = bool(
+            last_user
+            and re.search(r"\b(download|pull|serve|launch|run|start|ollama|vllm|llama\.cpp|model picker|endpoint)\b", last_user, re.I)
+            and re.search(r"\b(model|qwen|gemma|llama|ollama|vllm|gguf|endpoint|picker)\b", last_user, re.I)
+        )
+        if last_user and _skills_on and not _model_lifecycle_request:
             from services.memory.skills import SkillsManager
             from src.constants import DATA_DIR
             sm = SkillsManager(DATA_DIR)
@@ -1419,6 +1422,422 @@ async def _classify_request_mode(text: str) -> str:
         logger.warning(f"[classifier] resolve_endpoint failed ({e!r}); defaulting to chat")
         return "chat"
 
+
+# Hot path cache for LLM checklist extraction (per-process, prompt hash → list).
+# Identical prompts in the same session (e.g. wake context, intent-nudge retries)
+# don't re-pay the LLM cost. Capped to 256 entries via FIFO eviction.
+_LLM_CHECKLIST_CACHE: Dict[str, List[Dict]] = {}
+_LLM_CHECKLIST_CACHE_MAX = 256
+
+
+# Strong-verb sniff for the LLM-checklist gate. If a message has none of
+# these, it's overwhelmingly a chat / question / acknowledgement and not
+# worth a task_model round-trip. Broader than _TASK_VERB_RE because the
+# LLM is the next gate, not the final answer — false positives only cost
+# one cheap call.
+_LIKELY_TASK_VERB_RE = re.compile(
+    r"\b(?:"
+    # Acquisition / setup
+    r"download|pull|fetch|install|setup|configure|provision|"
+    # Serving / running
+    r"serve|launch|start|run|spin\s*up|fire\s*up|boot|deploy|"
+    # Build / restart
+    r"build|compile|rebuild|restart|reload|hot[- ]?patch|"
+    # Edits
+    r"edit|write|create|update|modify|delete|remove|rename|"
+    # Messaging / VCS
+    r"send|post|email|reply|push|commit|merge|rebase|clone|"
+    # File ops
+    r"upload|copy|move|sync|migrate|"
+    # Bug fixing / state
+    r"fix|patch|implement|add|enable|disable|stop|kill|cancel|"
+    # Diagnostics
+    r"test|verify|check|probe|tail|investigate|debug|"
+    # Registration / access
+    r"register|adopt|provision|grant|revoke|"
+    # Scheduling
+    r"schedule|cron|remind|"
+    # Info / inspection — added so prompts like "list largest files",
+    # "show me running processes", "find logs over 1 GB", "ssh and grep
+    # the config" produce a checklist instead of falling through to chat
+    # mode. These commonly require one or more tool calls so a per-step
+    # checklist is the right UX.
+    r"list|show|display|find|search|locate|count|grep|"
+    r"get|give|fetch|grab|read|look|view|inspect|scan|"
+    r"ssh|connect"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _has_likely_task_verb(text: str) -> bool:
+    return bool(_LIKELY_TASK_VERB_RE.search(text or ""))
+
+
+async def _extract_task_checklist_llm(
+    text: str,
+    fallback_url: str = "",
+    fallback_model: str = "",
+    fallback_headers: Optional[Dict] = None,
+) -> List[Dict]:
+    """LLM fallback for checklist extraction when the regex misses.
+
+    Uses the configured `task_model` (small/fast) to parse the user request
+    into 1-5 verb+object items, each with the actionable verb_id we already
+    understand. If task_model isn't configured, falls back to the caller's
+    chat model so this path still works out of the box. Returns [] on any
+    error, empty/invalid JSON, or chat-mode output — caller treats that as
+    "no checklist, chat mode".
+
+    The regex extractor handles the obvious download/serve/deploy/verify
+    cases; this only fires for off-keyword phrasings the regex misses.
+    """
+    if not text or len(text) > 2000:
+        return []
+    key = hashlib.sha1(text.encode("utf-8", "ignore")).hexdigest()
+    cached = _LLM_CHECKLIST_CACHE.get(key)
+    if cached is not None:
+        return [dict(it) for it in cached]   # defensive copy
+    ep_url = ""
+    ep_model = ""
+    ep_headers: Dict = {}
+    task_model_spec = (get_setting("task_model", "") or "").strip()
+    if task_model_spec:
+        try:
+            from src.endpoint_resolver import resolve_endpoint
+            ep_url, ep_model, ep_headers = resolve_endpoint("task")
+        except Exception as e:
+            logger.warning(f"[checklist-llm] resolve_endpoint failed ({e!r}); falling back to chat model")
+    if not ep_url or not ep_model:
+        # Fall back to the active chat model so this works without
+        # task_model being explicitly configured. A bit more expensive than
+        # a dedicated small model, but the extractor cap (one call per
+        # unique prompt, cached) keeps the cost bounded.
+        ep_url = fallback_url
+        ep_model = fallback_model
+        ep_headers = fallback_headers or {}
+    if not ep_url or not ep_model:
+        return []
+    try:
+        from src.llm_core import llm_call_async
+    except Exception as e:
+        logger.warning(f"[checklist-llm] llm_core import failed ({e!r})")
+        return []
+    prompt = (
+        "Your entire response MUST be a single JSON object starting with `{` "
+        "and ending with `}`. No prose, no preamble, no thinking out loud.\n\n"
+        "Schema: {\"items\":[{\"id\":<id>,\"label\":<short imperative>,\"model\":<id|\"\">}]}\n"
+        "Allowed ids: download_model, serve_model, register_endpoint, "
+        "deploy_change, verify_change, other.\n\n"
+        "RULE — if the user is asking the agent to DO anything that "
+        "requires a tool call (ssh, list, find, run, check, look up, "
+        "show, get info, edit, deploy, fix, anything that isn't pure "
+        "conversation), produce AT LEAST ONE item. Use `other` when no "
+        "specific id fits — that's normal, the label is what matters.\n\n"
+        "Empty list (`{\"items\":[]}`) ONLY for pure conversational turns: "
+        "greetings (yo/hi/thanks), reactions (lol/nice), small-talk "
+        "questions about the assistant itself, philosophical or "
+        "open-ended discussion with no tool work to do.\n\n"
+        "Multi-step asks split into multiple items in order. "
+        "Running/launching/serving a model = two items (download then serve). "
+        "Label echoes the user's wording — don't substitute names.\n\n"
+        f"USER REQUEST: {text[:1500]}\n\n"
+        "Begin your response with `{` now:"
+    )
+    try:
+        raw = await asyncio.wait_for(
+            llm_call_async(
+                url=ep_url,
+                model=ep_model,
+                messages=[{"role": "user", "content": prompt}],
+                headers=ep_headers or {},
+                temperature=0.0,
+                # Reasoning models (deepseek-v4-flash etc.) burn 200-500
+                # tokens "thinking out loud" before producing JSON, so give
+                # them headroom — the parser strips <think> blocks and
+                # falls back to finding the first {…} block.
+                max_tokens=1500,
+            ),
+            timeout=15.0,
+        )
+    except Exception as e:
+        logger.warning(f"[checklist-llm] call failed ({e!r}); empty checklist")
+        return []
+    raw = (raw or "").strip()
+    # Strip <think>…</think> blocks if the task_model is a reasoning model.
+    raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL | re.IGNORECASE).strip()
+    # Strip code fences if model wrapped JSON.
+    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.IGNORECASE).strip()
+    try:
+        data = json.loads(raw)
+    except Exception:
+        # Best-effort recovery: find first {...} block in the output.
+        m = re.search(r"\{.*\}", raw, flags=re.DOTALL)
+        if not m:
+            logger.info(f"[checklist-llm] non-JSON output: {raw[:200]!r}")
+            return []
+        try:
+            data = json.loads(m.group(0))
+        except Exception:
+            logger.info(f"[checklist-llm] JSON parse failed: {raw[:200]!r}")
+            return []
+    raw_items = (data or {}).get("items") if isinstance(data, dict) else None
+    if not isinstance(raw_items, list):
+        return []
+    items: List[Dict] = []
+    seen_ids: set = set()
+    valid_ids = {"download_model", "serve_model", "register_endpoint",
+                 "deploy_change", "verify_change", "other"}
+    for raw_it in raw_items[:5]:
+        if not isinstance(raw_it, dict):
+            continue
+        item_id = str(raw_it.get("id") or "").strip().lower()
+        if item_id not in valid_ids:
+            continue
+        label = str(raw_it.get("label") or "").strip()[:80]
+        if not label:
+            continue
+        model_id = str(raw_it.get("model") or "").strip()[:120]
+        # "other" needs a unique id so multiple custom items don't collide
+        if item_id == "other":
+            item_id = f"other_{len(items)}"
+        if item_id in seen_ids:
+            continue
+        seen_ids.add(item_id)
+        items.append({
+            "id": item_id,
+            "label": label,
+            "status": "pending",
+            "evidence": "",
+            "model": model_id,
+        })
+    # Cache (FIFO eviction).
+    if len(_LLM_CHECKLIST_CACHE) >= _LLM_CHECKLIST_CACHE_MAX:
+        try:
+            _LLM_CHECKLIST_CACHE.pop(next(iter(_LLM_CHECKLIST_CACHE)))
+        except StopIteration:
+            pass
+    _LLM_CHECKLIST_CACHE[key] = [dict(it) for it in items]
+    logger.info(f"[checklist-llm] extracted {len(items)} items for {text[:60]!r}")
+    return items
+
+
+# Extract model identifiers from the user prompt so checklist labels can show
+# WHAT we're acting on, not just "the requested model". Matches:
+#   - Ollama tag form:   qwen2.5:14b, llama3.1:8b, deepseek-r1:7b, foo/bar:Q4
+#   - HuggingFace repo:  unsloth/Qwen3.5-9B-GGUF, openai/gpt-oss-120b
+# Looks like real model identifiers, not stray punctuation. Ordered: tags
+# (with colon) preferred over bare repo ids since they're more specific.
+_MODEL_ID_RE = re.compile(
+    r"\b(?:[A-Za-z0-9][A-Za-z0-9._-]*/)?[A-Za-z][A-Za-z0-9._-]{1,80}"
+    r"(?::[A-Za-z0-9][A-Za-z0-9._-]{0,40})?\b"
+)
+_MODEL_TAG_RE = re.compile(
+    r"\b[A-Za-z][A-Za-z0-9._-]{0,40}:[A-Za-z0-9][A-Za-z0-9._-]{0,40}\b"
+)
+_MODEL_HF_RE = re.compile(
+    r"\b[A-Za-z0-9][A-Za-z0-9._-]+/[A-Za-z][A-Za-z0-9._-]{1,80}\b"
+)
+# Filler nouns we never want to confuse for a model name.
+_MODEL_BLOCKLIST = frozenset({
+    "model", "models", "requested", "kierkegaard", "odysseus", "ajax",
+    "vllm", "ollama", "llama", "sglang", "hf", "huggingface",
+    "the", "a", "an", "and", "or", "to", "on", "at", "with",
+    "picker", "endpoint", "server", "host", "default", "local",
+})
+
+
+def _extract_model_names(text: str) -> List[str]:
+    """Pull plausible model identifiers from the prompt, tag-form first."""
+    seen: List[str] = []
+    for m in _MODEL_TAG_RE.findall(text or ""):
+        if m.lower() not in _MODEL_BLOCKLIST and m not in seen:
+            seen.append(m)
+    for m in _MODEL_HF_RE.findall(text or ""):
+        if m.lower() not in _MODEL_BLOCKLIST and m not in seen:
+            seen.append(m)
+    return seen[:4]
+
+
+def _extract_task_checklist(text: str) -> List[Dict]:
+    """Extract a tiny evidence-gated checklist from common task requests.
+
+    Labels carry the actual model identifier when one is present in the
+    prompt — so checkoff regexes can verify the SPECIFIC model appeared in
+    tool output instead of any cached/served entry. This is what stops the
+    "any model cached → download done" false checkmark.
+    """
+    t = (text or "").lower()
+    items: List[Dict] = []
+    names = _extract_model_names(text or "")
+    name_suffix = f" ({names[0]})" if names else ""
+
+    def add(item_id: str, label: str, model: str = ""):
+        if not any(it.get("id") == item_id for it in items):
+            items.append({
+                "id": item_id,
+                "label": label,
+                "status": "pending",
+                "evidence": "",
+                "model": model,
+            })
+
+    if re.search(r"\b(download|pull|fetch)\b", t):
+        add("download_model", f"Download {names[0] if names else 'the requested model'}", names[0] if names else "")
+    if re.search(r"\b(serve|launch|run|start)\b", t) and re.search(r"\b(model|endpoint|server|vllm|ollama|llama\.cpp|sglang)\b", t):
+        add("serve_model", f"Serve {names[0] if names else 'the requested model'}", names[0] if names else "")
+    if re.search(r"\b(add|register|appear|show up)\b", t) and re.search(r"\b(model picker|picker|endpoint)\b", t):
+        add("register_endpoint", f"Register{name_suffix} in the picker", names[0] if names else "")
+    # deploy_change / verify_change: require an OBJECT, not a bare verb.
+    # "deploy" / "test" / "verify" alone are ambiguous (a one-word "test"
+    # is almost always a chat-style ping, not a task) — only treat them
+    # as tasks when paired with something to act on. The "or other task
+    # verbs" branch already covers cases where verify/test appears
+    # alongside a real task verb.
+    _short_only_verb = len(t.split()) <= 2  # bare verb or two-word ping
+    if re.search(r"\b(deploy|hot[- ]?patch|restart)\b", t) and not _short_only_verb:
+        add("deploy_change", "Deploy the requested change")
+    if re.search(r"\b(test|verify|check)\b", t) and not _short_only_verb:
+        add("verify_change", "Verify the requested result")
+
+    if "download_model" in {it["id"] for it in items} and re.search(r"\bserve\b|\blaunch\b|\brun\b", t):
+        add("serve_model", f"Serve {names[0] if names else 'the requested model'}", names[0] if names else "")
+    return items[:5]
+
+
+def _update_task_checklist(checklist: List[Dict], tool_events: list) -> None:
+    """Mark checklist items from actual tool evidence, never from model prose.
+
+    Items carry the user-named model id; the regex below checks the tool's
+    output contains THAT specific name before flipping to done. Without this,
+    `list_cached_models` returning "5 cached models" would mark a download
+    of qwen3.6 as done just because qwen2.5 happens to be in the cache.
+    """
+    if not checklist or not tool_events:
+        return
+
+    def model_for(item_id: str) -> str:
+        for it in checklist:
+            if it.get("id") == item_id:
+                return (it.get("model") or "").strip()
+        return ""
+
+    def has_model(out: str, item_id: str) -> bool:
+        """True when the specific model id appears in tool output. Empty model
+        (no name extracted from prompt) falls back to permissive matching for
+        backwards compatibility."""
+        m = model_for(item_id)
+        if not m:
+            return True
+        # Case-insensitive substring is fine here — model ids are unique enough
+        # (qwen2.5:14b won't accidentally match other strings). Strip any
+        # trailing :tag for HF repos so "unsloth/Qwen3.5-9B-GGUF:Q4_K_M" still
+        # matches when the tool just shows the repo without the tag.
+        m_low = m.lower()
+        return m_low in (out or "").lower() or m_low.split(":")[0] in (out or "").lower()
+
+    def mark(item_id: str, status: str, evidence: str):
+        for it in checklist:
+            if it.get("id") == item_id and it.get("status") != "done":
+                it["status"] = status
+                it["evidence"] = evidence[:240]
+
+    for ev in tool_events:
+        tool = (ev.get("tool") or "").lower()
+        out = (ev.get("output") or "").strip()
+        low = out.lower()
+        # download_model / serve_model TOOL outputs only flip the matching
+        # item when the requested model name is in the output. This stops
+        # `list_downloads` showing "MiniMax-M2.7: running" from marking our
+        # qwen2.5:14b checklist as waiting.
+        if tool == "download_model" and has_model(out, "download_model"):
+            if "download started" in low or "session:" in low:
+                mark("download_model", "waiting", out)
+        if tool == "list_downloads":
+            if re.search(r"\bcompleted\b|\bdone\b|download complete|download_ok", low) and has_model(out, "download_model"):
+                mark("download_model", "done", out)
+            elif re.search(r"\brunning\b|\bin progress\b|%\b|eta", low) and has_model(out, "download_model"):
+                mark("download_model", "waiting", out)
+        if tool == "list_cached_models" and re.search(r"\bgb\b|\bcached model", low) and has_model(out, "download_model"):
+            mark("download_model", "done", out)
+        if tool == "serve_model" and has_model(out, "serve_model"):
+            if re.search(r"\bserving\b|session:", low):
+                mark("serve_model", "waiting", out)
+        if tool == "list_served_models":
+            if re.search(r"\b(?:live|running|ready)\b", low) and has_model(out, "serve_model"):
+                mark("serve_model", "done", out)
+                mark("register_endpoint", "done", out)
+            elif re.search(r"\b(?:stopped|offline|crashed|error)\b", low) and has_model(out, "serve_model"):
+                mark("serve_model", "pending", out)
+        if tool in {"manage_endpoints", "adopt_served_model"} and ev.get("exit_code") in (None, 0) and has_model(out, "register_endpoint"):
+            mark("register_endpoint", "done", out)
+        if tool in {"bash", "python", "write_file", "edit_file", "create_document", "update_document", "edit_document"} and ev.get("exit_code") in (None, 0):
+            mark("deploy_change", "done", out)
+        if tool in {"bash", "python", "app_api"} and ev.get("exit_code") in (None, 0):
+            if re.search(r"\b(ok|success|200|passed|compiled|up|running)\b", low):
+                mark("verify_change", "done", out)
+        # (other_* completion handled separately at end-of-turn — see
+        # _flush_other_items_on_done below. Marking here on per-tool would
+        # check off `other_*` after the FIRST tool call, even when that
+        # was just a lookup like list_cookbook_servers and the real work
+        # hasn't happened yet.)
+
+
+def _flush_other_items_on_done(
+    checklist: List[Dict],
+    tool_events: list,
+    final_text: str,
+) -> int:
+    """At end-of-turn, mark remaining `other_*` items as done if the agent
+    actually did meaningful work this turn.
+
+    The LLM extractor produces `other_*` items for prompts that don't fit
+    the canonical buckets (e.g. "ssh odysseus", "list largest files").
+    Their completion has no specific tool-output regex, so without this
+    they stay pending forever and the supervisor nudges 3 times trying to
+    finish them.
+
+    Gate: at least one effectful tool succeeded (bash/python/edit_file/etc.)
+    AND the model produced a substantive final answer (>30 chars,
+    non-question). Then every remaining `other_*` item flips to done.
+
+    Returns count of items flipped.
+    """
+    if not checklist or not tool_events:
+        return 0
+    _EFFECTFUL = {"bash", "python", "write_file", "edit_file",
+                  "create_document", "update_document", "edit_document",
+                  "app_api", "api_call", "web_search", "web_fetch",
+                  "download_model", "serve_model"}
+    had_real_work = any(
+        ev.get("tool") in _EFFECTFUL and ev.get("exit_code") in (None, 0)
+        for ev in tool_events
+    )
+    if not had_real_work:
+        return 0
+    text = (final_text or "").strip()
+    # Treat "still asking the user a question" as not-done — those are
+    # punts, not finished work.
+    if not text or len(text) < 30:
+        return 0
+    if text.rstrip().endswith("?"):
+        return 0
+    n = 0
+    for it in checklist:
+        if it.get("id", "").startswith("other_") and it.get("status") != "done":
+            it["status"] = "done"
+            it["evidence"] = "tools succeeded + answer produced"
+            n += 1
+    return n
+
+
+def _pending_task_items(checklist: List[Dict]) -> List[Dict]:
+    return [it for it in (checklist or []) if it.get("status") != "done"]
+
+
+def _waiting_task_items(checklist: List[Dict]) -> List[Dict]:
+    return [it for it in (checklist or []) if it.get("status") == "waiting"]
+
 def _format_bg_jobs_status(session_id: Optional[str]) -> str:
     """Compact summary of this session's background jobs for per-turn injection.
 
@@ -1601,6 +2020,19 @@ def _schedule_self_wake(session_id: str, owner: str, minutes: int, sess_name: Op
     silently if a wake for this session is already pending — we don't want
     a stack of wakes for one chat.
     """
+    # Disabled: using user-visible ScheduledTask rows for agent self-checks was
+    # the wrong abstraction. It polluted the Tasks UI, depended on the external
+    # task scheduler being active, and previously caused wake chains that cooked
+    # CPU. Long-running Cookbook work should be represented by Cookbook task
+    # state, and future auto-continuation should come from a Cookbook-specific
+    # watcher, not scheduled self-check tasks.
+    logger.info(
+        "[agent] self-wake disabled; not scheduling ping_chat_session "
+        "for session %s in %s min",
+        session_id,
+        minutes,
+    )
+    return
     from datetime import datetime, timedelta, timezone
     from core.database import SessionLocal, ScheduledTask
     import uuid as _uuid
@@ -2027,18 +2459,63 @@ async def stream_agent_loop(
     # The master `agent_supervisor_ladder` setting decides whether we even
     # bother classifying — when off, every turn behaves as chat and the
     # supervisor pile stays dormant.
-    _supervisor_master = bool(get_setting("agent_supervisor_ladder", False))
-    _task_mode = False
-    if _supervisor_master:
+    # Wake-triggered runs are one-shot follow-ups. They must never enter the
+    # supervisor pile or classifier: the wake prompt itself ("Did you finish?")
+    # looks like a task and would otherwise re-arm nudges/verifier behavior in
+    # a headless context.
+    _supervisor_master = bool(get_setting("agent_supervisor_ladder", False)) and not _from_wake
+    # Single mental model: the checklist extractor IS the classifier.
+    # - 0 items extracted (e.g. "hi", "what's X?") -> chat mode, single round, break.
+    # - >0 items -> task mode, item-by-item with wake-timer escalation between polls.
+    # The separate 2-stage regex+LLM classifier is dropped because it caused
+    # tasky requests to fall into chat mode and miss the checklist + wait
+    # discipline entirely. Wake-triggered runs (_from_wake) restore the
+    # persisted checklist from the timer continuation rec instead of
+    # re-extracting from scratch.
+    _task_checklist = []
+    if _from_wake:
+        # Look back through recent system/user messages for the bg_monitor's
+        # injected "Current checklist state:\n<json>" block. Use that as the
+        # ground truth so wake_count and per-item evidence persist across wakes.
         try:
-            _classified = await _classify_request_mode(_verifier_instruction or "")
-            _task_mode = (_classified == "task")
-            logger.info(
-                f"[classifier] mode={_classified} (master=on, msg={(_verifier_instruction or '')[:80]!r})"
+            for _m in reversed(messages or []):
+                _c = (_m or {}).get("content") or ""
+                if "Current checklist state:" in _c:
+                    _payload = _c.split("Current checklist state:", 1)[1]
+                    # Take from first '[' to matching final ']' on a line
+                    _start = _payload.find("[")
+                    _end = _payload.rfind("]")
+                    if _start >= 0 and _end > _start:
+                        _task_checklist = json.loads(_payload[_start:_end + 1])
+                        if not isinstance(_task_checklist, list):
+                            _task_checklist = []
+                    break
+        except Exception as _ce:
+            logger.warning(f"[checklist] wake restore failed: {_ce!r}")
+            _task_checklist = []
+    # Pure LLM extraction. Every non-wake prompt goes to the task_model
+    # (cached per prompt hash, so repeats are free). The regex extractor +
+    # verb-sniff gate were dropped — they kept misclassifying real tasks
+    # ("ssh to ajax and list X", "Serve 235b on ajax fp8") because they
+    # required specific verb+noun shapes the model doesn't always match.
+    # LLM call is the right tool: one cheap call decides task vs chat.
+    if not _task_checklist and not _from_wake:
+        try:
+            _task_checklist = await _extract_task_checklist_llm(
+                _verifier_instruction or "",
+                fallback_url=endpoint_url,
+                fallback_model=model,
+                fallback_headers=headers,
             )
         except Exception as _ce:
-            logger.warning(f"[classifier] classify failed ({_ce!r}); defaulting to chat")
-            _task_mode = False
+            logger.warning(f"[checklist-llm] extract errored: {_ce!r}")
+            _task_checklist = []
+    _task_mode = bool(_task_checklist)
+    logger.info(
+        f"[checklist] from_wake={_from_wake} items={len(_task_checklist)} "
+        f"task_mode={_task_mode} msg={(_verifier_instruction or '')[:80]!r}"
+    )
+    _task_checklist_nudges = 0
     # Supervisor ladder state (mechanism 4). Each rung fires at most once per
     # turn-sequence. Gated by the `agent_supervisor_ladder` setting; without
     # it the loop falls through to the existing break-on-no-tools behavior.
@@ -2067,7 +2544,7 @@ async def stream_agent_loop(
     # an action without emitting the tool call. Capped to prevent a model
     # that *can't* call the tool from looping forever.
     _intent_nudge_count = 0
-    _MAX_INTENT_NUDGES = 3
+    _MAX_INTENT_NUDGES = 1
 
     # "I said I would, then didn't" detector. The pattern that breaks debug
     # loops on weak models (deepseek-v4-flash mid-2026): the model writes
@@ -2112,6 +2589,8 @@ async def stream_agent_loop(
     # _stuck_rounds check needs empty _real_text, which misses the common
     # weak-model failure mode of "fail, ramble, fail again, ramble, fail".
     _failing_tool_sigs: dict[str, int] = {}
+    _bg_task_just_started = False
+    _agent_wait_requested = False
 
     # Char-runaway tracker for the streaming layer. Weak models occasionally
     # degenerate into emitting the same character thousands of times (e.g.
@@ -2122,10 +2601,90 @@ async def stream_agent_loop(
     _CHAR_RUNAWAY_WINDOW = 240
     _CHAR_RUNAWAY_LIMIT = 200
 
+    if _task_mode and _task_checklist:
+        logger.info(f"[checklist] EMIT task_checklist initial — {len(_task_checklist)} items")
+        yield f"data: {json.dumps({'type': 'task_checklist', 'items': _task_checklist})}\n\n"
+        _visible_task_lines = "\n".join(
+            f"- [ ] {it.get('label') or it.get('id')}"
+            for it in _task_checklist
+        )
+        # Use REAL newlines (\n) not literal "\n" chars — the dumb double-
+        # escape made the rendered chat show "Task checklist:\n- [ ] ..." with
+        # a visible backslash-n. json.dumps re-escapes real newlines for SSE,
+        # so the wire format is still correct; the parsed string the frontend
+        # gets is a normal newline that markdown renders as a line break.
+        yield f"data: {json.dumps({'delta': 'Task checklist:\n' + _visible_task_lines + '\n\n'})}\n\n"
+        _task_lines = "\n".join(
+            f"{i + 1}. {it.get('label') or it.get('id')} [{it.get('status', 'pending')}]"
+            for i, it in enumerate(_task_checklist)
+        )
+        messages.append({
+            "role": "system",
+            "content": (
+                "TASK CHECKLIST CONTROL\n"
+                "The runtime extracted this checklist from the original user request:\n"
+                f"{_task_lines}\n\n"
+                "You must work from this checklist. Do not mark the task done until every item is done by tool evidence. "
+                "Start with the first pending item only. If a tool starts long-running work, stop after the runtime timer is set. "
+                "When the timer resumes, continue from the same checklist. "
+                "Preserve exact model identifiers from the user's request. Do not reinterpret `qwen3.6` as `qwen3:6b`; use the exact requested Ollama tag unless a tool error proves it invalid. "
+                "For model lifecycle work, do not call manage_skills and do not use bash/ollama directly; use download_model, serve_model, list_downloads, list_served_models, manage_endpoints, and agent_wait."
+            ),
+        })
+
     for round_num in range(1, max_rounds + 1):
+        # Drain the mid-stream inject queue. The chat-inject HTTP route
+        # appends user-typed messages while the agent is mid-stream; here we
+        # turn each one into a user-role message in the live context BEFORE
+        # the LLM call so the model sees the new instruction on this round.
+        # Emit a visible notice so the user can confirm the inject landed
+        # instead of guessing whether the agent saw it.
+        if session_id:
+            try:
+                from src import chat_inject
+                _injects = await chat_inject.drain(session_id)
+            except Exception:
+                _injects = []
+            for _ij in _injects:
+                _ij_text = (_ij or {}).get("text") or ""
+                if not _ij_text:
+                    continue
+                messages.append({"role": "user", "content": f"[mid-stream inject] {_ij_text}"})
+                _notice_msg = f"Injected: {_ij_text[:160]}{'…' if len(_ij_text) > 160 else ''}"
+                yield f"data: {json.dumps({'type': 'agent_notice', 'message': _notice_msg, 'kind': 'inject'})}\n\n"
+        # Sticky wait discipline. If any checklist item is in `waiting` status
+        # (a download/serve is in progress per tool evidence), make the
+        # required next action unambiguous: agent_wait. Without this, the
+        # model polls list_downloads, sees "67%", writes "still going", then
+        # polls again next round — the classic "did you finish? did you
+        # finish?" hammering loop. Injected per-round so it stays sticky
+        # across the entire wait, not just the first round after launch.
+        if _task_checklist:
+            _waiting_now = [
+                it for it in _task_checklist if it.get("status") == "waiting"
+            ]
+            if _waiting_now:
+                _wlabels = ", ".join(
+                    (it.get("label") or it.get("id")) for it in _waiting_now
+                )
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        f"WAIT DISCIPLINE: The following checklist items are still "
+                        f"running per tool evidence: {_wlabels}. Do NOT poll status "
+                        f"again this round. Your next tool call MUST be `agent_wait` "
+                        f"with a duration (start at 60 seconds; escalate on each "
+                        f"subsequent wait). The runtime will resume you when the "
+                        f"timer fires; only THEN check status."
+                    ),
+                })
         round_response = ""
         round_reasoning = ""  # reasoning_content deltas (DeepSeek-thinking, vLLM --reasoning-parser)
         native_tool_calls = []  # populated if model uses function calling
+        _bg_task_just_started = False
+        _bg_task_session: Optional[str] = None
+        _bg_task_tool: Optional[str] = None
+        _agent_wait_requested = False
         # Reset doc streaming state per round
         _doc_acc = ""
         _doc_opened = False
@@ -2526,6 +3085,22 @@ async def stream_agent_loop(
         round_texts.append(cleaned_round)
 
         if not tool_blocks:
+            _update_task_checklist(_task_checklist, tool_events)
+            # End-of-turn flush for `other_*` items that have no specific
+            # completion regex — only fires when the agent actually did
+            # tool work this turn AND produced an answer (not a question).
+            _flushed = _flush_other_items_on_done(_task_checklist, tool_events, cleaned_round)
+            if _flushed:
+                logger.info(f"[checklist] flushed {_flushed} other_* items on end-of-turn")
+            # ── Chat-mode hard break ─────────────────────────────────
+            # Rule: stream breaks only on (a) task finished, (b) task
+            # failed, or (c) no task. This is case (c) — the user's prompt
+            # extracted to an empty checklist, so the agent answered as
+            # chat and the turn is done. Skip ALL the supervisor / nudge /
+            # verifier / timer machinery below — none of it applies when
+            # there's nothing to verify or continue.
+            if not _task_mode:
+                break
             # ── Self-wake (early-schedule) ───────────────────────────
             # Schedule the self-wake task IMMEDIATELY when the round ends
             # with no tool calls and shows deferral language. Done here
@@ -2661,10 +3236,15 @@ async def stream_agent_loop(
             # the nudge cap broke the loop.
             _has_natural_done = bool(re.search(
                 r"(?:^|\n)\s*\[done\]|(?:^|\n)\s*\[blocked|"
+                r"(?:^|\n)\s*(?:done|fixed|added|registered|updated|deployed|served|launched)[\s!.:,-]|"
                 r"\b(?:all set|task complete|task is complete|"
+                r"(?:endpoint|model endpoint) (?:added|registered)|"
+                r"added (?:the )?(?:endpoint|model endpoint)|"
+                r"registered (?:the )?(?:endpoint|model endpoint)|"
                 r"successfully (?:served|deployed|launched|completed)|"
                 r"now (?:running|serving|deployed)|"
                 r"is (?:up and )?running|is now (?:served|deployed|live)|"
+                r"ready to (?:accept requests|use)|"
                 r"verified (?:with|that)|"
                 r"confirmed (?:and )?working|"
                 r"that's everything|nothing else (?:to|left))\b",
@@ -2915,7 +3495,15 @@ async def stream_agent_loop(
             # showing. The intent-nudge above only fires on visible
             # text matching the regex; this catches the more common
             # weak-model failure of thinking forever then giving up.
-            if (round_reasoning
+            # Gated on task_mode — chat-mode greetings ("hi", "yo") sometimes
+            # produce a `<think>` block with no visible content because the
+            # model's reply landed inside the think tag. Forcing a second
+            # round in that case adds a spurious "Thinking ▄▃▂" indicator
+            # after the user message and ends with the same reply. Only
+            # task-mode turns benefit from nudging — there's actual work
+            # being abandoned.
+            if (_task_mode
+                    and round_reasoning
                     and not _intent_text  # set above by intent block
                     and _intent_nudge_count < _MAX_INTENT_NUDGES):
                 _intent_nudge_count += 1
@@ -2943,14 +3531,11 @@ async def stream_agent_loop(
                 })
                 yield f'data: {json.dumps({"type": "agent_step", "round": round_num + 1})}\n\n'
                 continue
-            # ── Self-wake on deferred work ──────────────────────────
+            # ── Timer on deferred work ──────────────────────────────
             # Agent ended with no tool calls, no [DONE], and SAID it
             # would wait for something to finish ("31 minutes remaining",
-            # "once the download completes", etc). Schedule a one-off
-            # ScheduledTask that pings this session at the parsed ETA so
-            # the agent re-checks status without the user having to type
-            # "did you finish?" manually. Cap at 1h to avoid runaway
-            # schedules. Only one wake per session at a time.
+            # "once the download completes", etc). Use the chat-local
+            # continuation timer, not user-visible ScheduledTask rows.
             try:
                 if (_task_mode
                         and session_id and owner and not _from_wake
@@ -2959,12 +3544,135 @@ async def stream_agent_loop(
                     _eta_min = _parse_eta_minutes(cleaned_round)
                     if _eta_min and _eta_min > 0:
                         _wake_min = min(60, max(1, _eta_min))
-                        _schedule_self_wake(session_id, owner, _wake_min, sess_name=None)
+                        from src.agent_continuations import add_timer_wait
+                        add_timer_wait(
+                            session_id=session_id,
+                            owner=owner,
+                            delay_seconds=_wake_min * 60,
+                            next_hint="Continue the original checklist by checking the waiting external work first.",
+                            checklist=_task_checklist,
+                        )
                         yield (
-                            f'data: {json.dumps({"type": "agent_notice", "message": f"Scheduled a self-check in ~{_wake_min} min to follow up."})}\n\n'
+                            f'data: {json.dumps({"type": "continuation_wait", "seconds": _wake_min * 60, "session_id": session_id, "reason": "Waiting before the next check"})}\n\n'
                         )
             except Exception as _swe:
-                logger.warning(f"[agent] self-wake schedule failed: {_swe!r}")
+                logger.warning(f"[agent] timer continuation schedule failed: {_swe!r}")
+            # ── Evidence-gated task checklist ───────────────────────
+            # Common multi-step asks ("download and serve this model") must
+            # satisfy every extracted deliverable before we accept the final
+            # answer. This is stronger than a literal [DONE] marker because it
+            # is driven by tool evidence, not model prose.
+            _pending_items = _pending_task_items(_task_checklist)
+            _waiting_items = _waiting_task_items(_task_checklist)
+            if (_task_mode
+                    and _task_checklist
+                    and _pending_items
+                    and not _force_answer
+                    and not _from_wake):
+                if _waiting_items:
+                    logger.info(
+                        "[supervisor] checklist waiting: %s",
+                        [it.get("id") for it in _waiting_items],
+                    )
+                    if session_id and owner:
+                        try:
+                            from src.agent_continuations import add_timer_wait
+                            add_timer_wait(
+                                session_id=session_id,
+                                owner=owner,
+                                delay_seconds=5 * 60,
+                                next_hint=(
+                                    "Continue the original checklist. A checklist item was waiting; "
+                                    "check status with list_downloads/list_served_models first, then "
+                                    "mark completed work by continuing to the next required task."
+                                ),
+                                checklist=_task_checklist,
+                            )
+                            yield (
+                                f'data: {json.dumps({"type": "continuation_wait", "seconds": 5 * 60, "session_id": session_id, "reason": "Waiting for the current checklist item"})}\n\n'
+                            )
+                        except Exception as _cwe:
+                            logger.warning(f"[agent] checklist wait timer failed: {_cwe!r}")
+                    break
+                # Push the model through multiple nudge rounds before giving
+                # up. Cap raised from 1 → 3 so a confused round doesn't kill
+                # the whole task. Each escalation gets progressively pointier:
+                #   #1: "continue with the next tool"
+                #   #2: "you've stalled, here's the exact tool to call"
+                #   #3: "last chance — emit the tool call or say BLOCKED"
+                # After 3, force-answer mode forces a final blocker summary.
+                if _task_checklist_nudges < 3:
+                    _task_checklist_nudges += 1
+                    pending_lines = "\n".join(
+                        f"- {it.get('label') or it.get('id')}" for it in _pending_items
+                    )
+                    done_lines = "\n".join(
+                        f"- {it.get('label')}: {it.get('evidence', '')[:120]}"
+                        for it in _task_checklist if it.get("status") == "done"
+                    ) or "- none yet"
+                    logger.info(
+                        "[supervisor] checklist incomplete on round %s (nudge %d/3): %s",
+                        round_num, _task_checklist_nudges,
+                        [it.get("id") for it in _pending_items],
+                    )
+                    yield f'data: {json.dumps({"type": "supervisor_step", "rung": "checklist", "round": round_num, "reason": f"Checklist still incomplete (nudge {_task_checklist_nudges}/3)"})}\n\n'
+                    # Map item ids to the tool the model should call so the
+                    # nudge can be concrete instead of generic.
+                    _tool_hint_map = {
+                        "download_model": "download_model (or list_cached_models to confirm it's already there)",
+                        "serve_model": "serve_model (or list_served_models to confirm it's already serving)",
+                        "register_endpoint": "manage_endpoints (or list_served_models — auto-register fires when serve goes live)",
+                        "deploy_change": "the appropriate edit/write tool",
+                        "verify_change": "the appropriate verification tool (bash/python/api_call)",
+                    }
+                    _next_item = _pending_items[0]
+                    _next_tool = _tool_hint_map.get(_next_item.get("id"), "the next required tool")
+                    if _task_checklist_nudges == 1:
+                        _body = (
+                            "You cannot finish yet. The supervisor extracted this "
+                            "required checklist from the user's request, and these "
+                            "items are still missing evidence:\n"
+                            f"{pending_lines}\n\n"
+                            "Already proven:\n"
+                            f"{done_lines}\n\n"
+                            f"Make the next required tool call NOW. The next pending item is "
+                            f"'{_next_item.get('label') or _next_item.get('id')}' — call {_next_tool}. "
+                            f"Do not ask the user whether to continue."
+                        )
+                    elif _task_checklist_nudges == 2:
+                        _body = (
+                            f"Second nudge. You STILL haven't fired the tool. Pending:\n"
+                            f"{pending_lines}\n\n"
+                            f"The user did not give you the option to stop here. "
+                            f"This turn MUST contain a function call to {_next_tool}. "
+                            "If you genuinely cannot proceed (missing access, etc), "
+                            "say so in one sentence with the literal token [BLOCKED] "
+                            "so the runtime knows to stop."
+                        )
+                    else:
+                        _body = (
+                            "Third and final nudge before the runtime gives up. Either:\n"
+                            f"  (a) emit the function call to {_next_tool} this turn, OR\n"
+                            "  (b) write a single sentence beginning [BLOCKED] that names "
+                            "the exact obstacle (e.g. '[BLOCKED] download_model returns 403 "
+                            "for gated repos without HF_TOKEN').\n"
+                            "Anything else and the user is left with an unfinished task and "
+                            "no explanation."
+                        )
+                    messages.append({"role": "system", "content": _body})
+                    yield f'data: {json.dumps({"type": "agent_step", "round": round_num + 1})}\n\n'
+                    continue
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "The required checklist is still incomplete after 3 nudges. "
+                        "Stop now and tell the user EXACTLY which checklist items "
+                        "are incomplete and what blocked you on each. Use one short "
+                        "sentence per blocker."
+                    ),
+                })
+                _force_answer = True
+                continue
             # Stream ended naturally. The intent-nudge above already caught
             # the "I'll do X but didn't" punt case; the loop-breaker catches
             # circles; the poll-backstop catches status-poll loops. If we
@@ -3072,12 +3780,18 @@ async def stream_agent_loop(
         # the supervisor pile applies from here on, so a punt mid-task still
         # gets nudged (and the [DONE] requirement still applies to the final
         # round). Idempotent — flips once, stays True.
-        if tool_blocks and _supervisor_master and not _task_mode:
-            _task_mode = True
-            logger.info(
-                f"[classifier] auto-upgraded to task mode on round {round_num} "
-                f"(tool call fired: {[b.tool_type for b in tool_blocks]})"
-            )
+        # Auto-upgrade removed. It used to promote task_mode whenever an
+        # effectful tool fired (bash, python, write_file, etc.) — meant for
+        # cases like "fix this bug" where the regex extractor missed the
+        # task verb but the agent reached for a write. In practice it
+        # mis-classified neutral asks: "ssh to odysseus and list df -h"
+        # uses bash → got auto-promoted → supervisor + agent_wait kicked
+        # in → 12-minute wait chip on a 1-shot info query. The LLM
+        # extractor now covers the cases the regex misses, so the
+        # auto-upgrade is no longer earning its keep. Trust the
+        # extractor's verdict (regex first, LLM fallback for off-keyword
+        # phrasings) and let the agent answer-and-break for everything
+        # else.
 
         # Pre-stream document content for fenced tool blocks (non-native path)
         # Native path already streamed via tool_call_delta above
@@ -3129,6 +3843,93 @@ async def stream_agent_loop(
                 cmd_display = block.content.split("\n")[0].strip()[:80]
             else:
                 cmd_display = block.content.strip()
+
+            if _bg_task_just_started and block.tool_type in ("download_model", "serve_model"):
+                output_text = (
+                    "Skipped duplicate model lifecycle call: a background download/serve task "
+                    f"already started in this round ({_bg_task_session or 'session n/a'})."
+                )
+                yield f'data: {json.dumps({"type": "tool_start", "tool": block.tool_type, "command": cmd_display, "round": round_num})}\n\n'
+                yield f'data: {json.dumps({"type": "tool_output", "tool": block.tool_type, "command": cmd_display, "output": output_text, "exit_code": 0})}\n\n'
+                tool_event = {
+                    "tool": block.tool_type,
+                    "desc": f"{block.tool_type}: skipped duplicate",
+                    "content": block.content,
+                    "result": {"output": output_text, "exit_code": 0},
+                    "round": round_num,
+                }
+                tool_events.append(tool_event)
+                tool_results.append(format_tool_result(f"{block.tool_type}: skipped duplicate", {"output": output_text, "exit_code": 0}))
+                tool_result_texts.append(tool_results[-1])
+                continue
+
+            if block.tool_type in ("download_model", "serve_model"):
+                _orig_req = (_verifier_instruction or "").lower()
+                if "qwen3.6" in _orig_req and "qwen3:6b" in (block.content or "").lower():
+                    try:
+                        _args = json.loads(block.content) if (block.content or "").strip().startswith("{") else {}
+                    except Exception:
+                        _args = {}
+                    if isinstance(_args, dict):
+                        _args["repo_id"] = "qwen3.6"
+                        block = block._replace(content=json.dumps(_args))
+                        cmd_display = block.content.strip()
+                    else:
+                        block = block._replace(content=(block.content or "").replace("qwen3:6b", "qwen3.6"))
+                        cmd_display = block.content.strip()
+
+            if block.tool_type == "bash":
+                _bash_cmd = (block.content or "").strip()
+                _bash_lower = _bash_cmd.lower()
+                _is_model_lifecycle_bash = (
+                    "#!bg" in _bash_lower
+                    or re.search(r"(^|[;&|]\s*)sleep\s+\d+", _bash_lower)
+                    or re.search(r"(^|[;&|]\s*)(?:/app/)?ollama\s+(?:pull|serve|list|show|ps|run|create|rm|stop)\b", _bash_lower)
+                    or re.search(r"(^|[;&|]\s*)(?:vllm\s+serve|llama-server\b|python3\s+-m\s+llama_cpp\.server\b)", _bash_lower)
+                )
+                if _is_model_lifecycle_bash:
+                    output_text = (
+                        "Rejected: do not use bash for Cookbook/model lifecycle work or waits. "
+                        "Use named tools so the UI can track progress and set the chat timer. "
+                        "For Ollama pulls call download_model with backend='ollama' and repo_id like 'qwen2.5:7b'. "
+                        "For checking status use list_downloads/list_served_models, or manage_endpoints for model-picker registration. "
+                        "Do not use `sleep` or `#!bg`; if the user requested a wait, start the Cookbook task with download_model/serve_model and let the timer continuation handle the wait."
+                    )
+                    yield f'data: {json.dumps({"type": "tool_start", "tool": block.tool_type, "command": cmd_display, "round": round_num})}\n\n'
+                    yield f'data: {json.dumps({"type": "tool_output", "tool": block.tool_type, "command": cmd_display, "output": output_text, "exit_code": 2})}\n\n'
+                    tool_event = {
+                        "tool": block.tool_type,
+                        "desc": "bash rejected",
+                        "content": _bash_cmd,
+                        "result": {"output": output_text, "exit_code": 2},
+                        "round": round_num,
+                    }
+                    tool_events.append(tool_event)
+                    tool_results.append(format_tool_result("bash rejected", {"output": output_text, "exit_code": 2}))
+                    tool_result_texts.append(tool_results[-1])
+                    continue
+
+            if block.tool_type == "manage_skills" and any(
+                it.get("id") in {"download_model", "serve_model", "register_endpoint"}
+                for it in (_task_checklist or [])
+            ):
+                output_text = (
+                    "Skipped manage_skills for model lifecycle work. Skills can contain stale shell/Ollama procedures; "
+                    "use the named Cookbook tools and checklist state directly."
+                )
+                yield f'data: {json.dumps({"type": "tool_start", "tool": block.tool_type, "command": cmd_display, "round": round_num})}\n\n'
+                yield f'data: {json.dumps({"type": "tool_output", "tool": block.tool_type, "command": cmd_display, "output": output_text, "exit_code": 0})}\n\n'
+                tool_event = {
+                    "tool": block.tool_type,
+                    "desc": "manage_skills skipped",
+                    "content": block.content,
+                    "result": {"output": output_text, "exit_code": 0},
+                    "round": round_num,
+                }
+                tool_events.append(tool_event)
+                tool_results.append(format_tool_result("manage_skills skipped", {"output": output_text, "exit_code": 0}))
+                tool_result_texts.append(tool_results[-1])
+                continue
 
             yield (
                 f'data: {json.dumps({"type": "tool_start", "tool": block.tool_type, "command": cmd_display, "round": round_num})}\n\n'
@@ -3201,9 +4002,28 @@ async def stream_agent_loop(
                     # Tool still running past the next deadline. Emit a
                     # status; the main loop's ladder picks up the
                     # eventual abort if we reach the last tick.
-                    yield (
-                        f'data: {json.dumps({"type": "tool_progress", "tool": block.tool_type, "round": round_num, "elapsed_s": int(next_deadline), "still_running": True})}\n\n'
+                    # Include `next_check_s` (the cumulative seconds until
+                    # the NEXT watchdog tick) so the frontend can render
+                    # both an elapsed counter AND a live countdown to the
+                    # next check — without it the user sees a static
+                    # "Still running… 30s elapsed" with no sense of when
+                    # the next update arrives.
+                    _next_idx = _next_tick + 1
+                    _next_check_s = (
+                        _STUCK_TICKS_S[_next_idx]
+                        if _next_idx < len(_STUCK_TICKS_S)
+                        else None
                     )
+                    _payload = {
+                        "type": "tool_progress",
+                        "tool": block.tool_type,
+                        "round": round_num,
+                        "elapsed_s": int(next_deadline),
+                        "still_running": True,
+                    }
+                    if _next_check_s is not None:
+                        _payload["next_check_s"] = _next_check_s
+                    yield f"data: {json.dumps(_payload)}\n\n"
                     _next_tick += 1
                     continue
                 if evt is None:
@@ -3328,6 +4148,9 @@ async def stream_agent_loop(
             # Forward a file-write diff for inline before/after rendering
             if "diff" in result:
                 tool_output_data["diff"] = result["diff"]
+            if result.get("agent_wait"):
+                wait_seconds = int(result.get("agent_wait_seconds") or 1)
+                yield f"data: {json.dumps({'type': 'continuation_wait', 'seconds': wait_seconds, 'session_id': session_id, 'reason': result.get('agent_wait_reason') or 'Waiting before the next check'})}\n\n"
             yield f'data: {json.dumps(tool_output_data)}\n\n'
 
             # Native document tools open in the editor + carry the REAL doc id.
@@ -3376,6 +4199,20 @@ async def stream_agent_loop(
                 "output": output_text,
                 "exit_code": result.get("exit_code"),
             }
+            if result.get("session_id"):
+                tool_event["session_id"] = result.get("session_id")
+            if result.get("host"):
+                tool_event["host"] = result.get("host")
+            if result.get("task_type"):
+                tool_event["task_type"] = result.get("task_type")
+            if (block.tool_type in ("download_model", "serve_model")
+                    and result.get("exit_code") in (0, None)
+                    and result.get("session_id")):
+                _bg_task_just_started = True
+                _bg_task_session = result.get("session_id")
+                _bg_task_tool = block.tool_type
+            if result.get("agent_wait") and result.get("exit_code") in (0, None):
+                _agent_wait_requested = True
             if result.get("image_url"):
                 for ik in ("image_url", "image_prompt", "image_model", "image_size", "image_quality"):
                     if result.get(ik):
@@ -3388,12 +4225,25 @@ async def stream_agent_loop(
             if result.get("diff"):
                 tool_event["diff"] = result["diff"]
             tool_events.append(tool_event)
+            _update_task_checklist(_task_checklist, [tool_event])
+            if _task_mode and _task_checklist:
+                yield f"data: {json.dumps({'type': 'task_checklist', 'items': _task_checklist})}\n\n"
             if block.tool_type in _VERIFIER_EFFECTFUL_TOOLS:
                 _effectful_used = True
 
             formatted = format_tool_result(desc, result)
             tool_results.append(formatted)
             tool_result_texts.append(formatted)
+            if _agent_wait_requested:
+                yield f"data: {json.dumps({'delta': 'Timer set. I will resume this task when it fires.'})}\n\n"
+                break
+
+        if _agent_wait_requested:
+            break
+
+        if _task_mode and _task_checklist and not _pending_task_items(_task_checklist):
+            yield f"data: {json.dumps({'type': 'task_completed', 'message': 'Task completed', 'items': _task_checklist})}\n\n"
+            break
 
         # Failing-tool repetition tracker. If the SAME tool call signature
         # returns an error 3 rounds in a row, force a tool-free round so
@@ -3442,15 +4292,11 @@ async def stream_agent_loop(
                 "content": (
                     "That tool call hit the execution timeout and was killed. "
                     "Do NOT retry the same foreground command. If the work is still needed, "
-                    "re-run it in background with a `#!bg` marker on the first line, then "
-                    "finish this turn without another tool call. A self-check is coming later."
+                    "use the appropriate named tool. For model/Cookbook work use download_model, "
+                    "serve_model, list_downloads, list_served_models, or manage_endpoints. "
+                    "Do not use `sleep`, `#!bg`, or self-check tasks."
                 ),
             })
-            try:
-                if session_id and owner and not _from_wake:
-                    _schedule_self_wake(session_id, owner, 2, sess_name=None)
-            except Exception:
-                logger.warning(f"[agent] timeout self-wake schedule failed on round {round_num}")
             _failing_tool_sigs.pop(_ftk, None)
             _force_answer = True
             # Timeouts are a hard control-path failure (foreground limit), not
@@ -3497,6 +4343,113 @@ async def stream_agent_loop(
                         for b in tool_blocks
                     ))
                     _failing_tool_sigs.pop(_ftk_now, None)
+
+        # A new long-running background workflow started this round (download
+        # or serve). End this turn without re-issuing tools; user-visible
+        # progress checks should wait for the next wake/turn to avoid tight
+        # polling loops.
+        if _bg_task_just_started and session_id and owner and not _from_wake:
+            _continuation_wait_seconds = 0
+            # Spawn a live progress publisher for this cookbook task so the
+            # subscriber sees download/serve progress in real time instead
+            # of dead silence between turn-end and wake-fire. The publisher
+            # self-terminates when the cookbook task reaches terminal status
+            # OR the wake-run takes over. See src/bg_task_progress.py.
+            try:
+                if _bg_task_session:
+                    from src import bg_task_progress
+                    bg_task_progress.start_publisher(session_id, _bg_task_session)
+            except Exception as _pe:
+                logger.warning(f"[agent] bg-progress publisher spawn failed: {_pe!r}")
+            try:
+                from src.agent_continuations import add_cookbook_wait, add_timer_wait
+                _pending_labels = [
+                    it.get("label") or it.get("id")
+                    for it in _pending_task_items(_task_checklist)
+                ]
+                _hint = (
+                    "Continue the user's checklist. Pending items: "
+                    + (", ".join(_pending_labels) if _pending_labels else "re-check Cookbook status")
+                    + ". Prefer list_downloads/list_served_models/manage_endpoints over raw shell."
+                )
+                add_cookbook_wait(
+                    session_id=session_id,
+                    owner=owner,
+                    cookbook_session_id=_bg_task_session or "",
+                    cookbook_type=_bg_task_tool or "cookbook",
+                    next_hint=_hint,
+                )
+                _explicit_wait_min = _parse_eta_minutes(_verifier_instruction or "")
+                if _explicit_wait_min:
+                    _continuation_wait_seconds = max(1, min(60, _explicit_wait_min)) * 60
+                else:
+                    # Escalating wait ladder: 1m, 2m, 5m, 10m, 20m, 40m (cap).
+                    # Wake count lives ON the relevant checklist item so it
+                    # persists across wakes (the item travels through the
+                    # timer rec → bg_monitor → next agent invocation). First
+                    # wake = 60s (snappy when it's quick), then grows so we
+                    # don't hammer a stuck download every minute forever.
+                    _WAIT_LADDER = [60, 120, 300, 600, 1200, 2400]
+                    _wait_item = None
+                    if _bg_task_tool == "download_model":
+                        _wait_item = next((it for it in _task_checklist if it.get("id") == "download_model"), None)
+                    elif _bg_task_tool == "serve_model":
+                        _wait_item = next((it for it in _task_checklist if it.get("id") == "serve_model"), None)
+                    _wcount = int((_wait_item or {}).get("wake_count", 0) or 0)
+                    _continuation_wait_seconds = _WAIT_LADDER[min(_wcount, len(_WAIT_LADDER) - 1)]
+                    if _wait_item is not None:
+                        _wait_item["wake_count"] = _wcount + 1
+                        # Label the countdown chip with WHAT we're waiting on
+                        # — so the user sees "Waiting on Download (3m)" not
+                        # just a bare countdown.
+                        _wait_item["_wait_label"] = _wait_item.get("label") or _wait_item.get("id")
+                add_timer_wait(
+                    session_id=session_id,
+                    owner=owner,
+                    delay_seconds=_continuation_wait_seconds,
+                    next_hint=_hint,
+                    checklist=_task_checklist,
+                )
+                wake_note = "A timer is set for the background task; this turn is now waiting."
+            except Exception:
+                logger.warning(f"[agent] cookbook continuation registration failed on round {round_num}")
+                wake_note = "A background task is now running; this turn is finishing."
+            messages.append({
+                "role": "system",
+                "content": (
+                    f"{wake_note} "
+                    f"Model was launched via {_bg_task_tool or 'download/serve'} with session "
+                    f"{_bg_task_session or 'n/a'}. "
+                    "Do NOT immediately poll `list_downloads` / `list_served_models` again in the "
+                    "same turn. If the user explicitly asked to wait a duration before checking, "
+                    "your next tool call must be `agent_wait` with that duration and a resume_prompt. "
+                    "Otherwise end with a short status."
+                ),
+            })
+            _status = (
+                f"Started {_bg_task_tool or 'background task'} "
+                f"({_bg_task_session or 'session n/a'}). "
+                f"{wake_note}"
+            )
+            yield f"data: {json.dumps({'delta': _status})}\n\n"
+            if _continuation_wait_seconds:
+                _wlabel = ""
+                if _bg_task_tool == "download_model":
+                    _wl = next((it for it in _task_checklist if it.get("id") == "download_model"), None)
+                    _wlabel = (_wl or {}).get("label") or "Download"
+                elif _bg_task_tool == "serve_model":
+                    _wl = next((it for it in _task_checklist if it.get("id") == "serve_model"), None)
+                    _wlabel = (_wl or {}).get("label") or "Serve"
+                _evt = {
+                    'type': 'continuation_wait',
+                    'seconds': _continuation_wait_seconds,
+                    'session_id': session_id,
+                    'reason': f'Waiting on {_wlabel}' if _wlabel else 'Waiting before the next check',
+                    'item_label': _wlabel,
+                }
+                yield f"data: {json.dumps(_evt)}\n\n"
+            _force_answer = True
+            break
 
         # If budget was hit, stop the loop
         if budget_hit:
@@ -3574,8 +4527,11 @@ async def stream_agent_loop(
     # The student just finished; if Tier 1 flags failure, the teacher
     # gets a turn (with its own tool calls forwarded to the user) and
     # a skill is saved ONLY if the teacher actually succeeds. Skipped
-    # when we ARE the teacher to avoid recursion.
-    if not _is_teacher_run:
+    # when we ARE the teacher to avoid recursion, AND skipped in
+    # chat-mode (no task to escalate, and the extra LLM call delays the
+    # [DONE] sentinel which keeps the stream "still going" after a
+    # simple greeting like "yo").
+    if not _is_teacher_run and _task_mode:
         try:
             from src.teacher_escalation import run_teacher_inline
             async for evt in run_teacher_inline(

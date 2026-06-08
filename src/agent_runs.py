@@ -140,15 +140,36 @@ async def _drain(session_id: str, agen: AsyncGenerator[str, None],
 
 def start(session_id: str, agen: AsyncGenerator[str, None]) -> _Run:
     """Start a detached run draining `agen` for a session. If a run is already in
-    flight for this session (e.g. a rapid double-send), it's cancelled first."""
+    flight for this session (e.g. a rapid double-send), it's cancelled first.
+
+    Continuation behaviour: if the previous run is FINISHED (done/stopped/error)
+    and its buffer is still in memory, we *append* to it rather than replacing.
+    This lets a wake-run (bg_monitor timer/cookbook continuation) extend the
+    same SSE stream a subscriber is already replaying — without it, the wake
+    creates a fresh _Run, the subscriber on the old (done) run returns after
+    replaying the original buffer, and the wake's tool calls / checklist
+    updates never surface live. The original message-saved sentinel from the
+    first turn is still in the buffer, so a fresh subscriber sees everything
+    in order: original → wake events → final."""
     prev = _RUNS.get(session_id)
     prev_task: Optional[asyncio.Task] = None
     if prev:
+        # In-flight: cancel and start fresh. Rapid double-send semantics.
         if prev.task and not prev.task.done():
             prev.task.cancel()
-            prev_task = prev.task   # new run awaits this before it starts writing
+            prev_task = prev.task
+            if prev.evict_task and not prev.evict_task.done():
+                prev.evict_task.cancel()
+            run = _Run()
+            _RUNS[session_id] = run
+            run.task = asyncio.create_task(_drain(session_id, agen, prev_task))
+            return run
+        # Finished: continue the SAME run so subscribers see the wake events.
         if prev.evict_task and not prev.evict_task.done():
             prev.evict_task.cancel()
+        prev.status = "running"
+        prev.task = asyncio.create_task(_drain(session_id, agen, None))
+        return prev
     run = _Run()
     _RUNS[session_id] = run
     run.task = asyncio.create_task(_drain(session_id, agen, prev_task))
@@ -157,7 +178,15 @@ def start(session_id: str, agen: AsyncGenerator[str, None]) -> _Run:
 
 async def subscribe(session_id: str) -> AsyncGenerator[str, None]:
     """Replay the run's buffer from the start, then stream live until it ends.
-    Safe to call repeatedly (reconnect) and from multiple clients at once."""
+    Safe to call repeatedly (reconnect) and from multiple clients at once.
+
+    Continuation aware: when a wake-run (bg_monitor) calls agent_runs.start
+    again for the same session it reuses the existing _Run (see `start`) and
+    flips status back to running. So when we receive a sentinel here, we
+    DON'T immediately break — we wait briefly for a possible wake. Without
+    that, the subscriber returns after replaying the original buffer and
+    never sees the wake's tool calls / checklist updates / final answer.
+    """
     run = _RUNS.get(session_id)
     if run is None:
         return
@@ -167,21 +196,81 @@ async def subscribe(session_id: str) -> AsyncGenerator[str, None]:
     # the run out from under it mid-replay.
     if run.evict_task and not run.evict_task.done():
         run.evict_task.cancel()
+
+    # How long to wait for a wake-run to resume the same _Run after a
+    # sentinel before we conclude there really is no continuation coming.
+    # 30 s comfortably covers a typical cookbook-monitor 2-second poll, a
+    # cookbook task that's still finishing, and a chunky timer wake.
+    _RESUME_GRACE_S = 30
     try:
         next_seq = 0
+        # Pace the buffer replay so a subscriber who joins mid-run sees the
+        # backlog animate in instead of getting 5 rounds dumped at once
+        # ("the stream jumped forward 5 steps"). Skip pacing for trivially
+        # small buffers (a normal one-shot turn) to keep first paint snappy.
+        _backlog = len(run.buffer)
+        _pace = 0.0
+        if _backlog > 8:
+            _pace = min(0.08, max(0.02, 2.0 / _backlog))  # ~80ms/event, total <=2s
         while next_seq < len(run.buffer):
             yield run.buffer[next_seq]
             next_seq += 1
-        if run.status != "running":
-            return
+            if _pace and next_seq < _backlog:
+                await asyncio.sleep(_pace)
         while True:
-            seq, ev = await q.get()
-            if seq is None:            # end sentinel
-                while next_seq < len(run.buffer):   # flush any tail the sentinel raced
+            try:
+                seq, ev = await asyncio.wait_for(q.get(), timeout=_RESUME_GRACE_S)
+            except asyncio.TimeoutError:
+                # Nothing fresh for a while. If the run still isn't running
+                # at this point, the agent has genuinely finished — exit.
+                # Otherwise keep waiting for the live events.
+                if run.status != "running":
+                    while next_seq < len(run.buffer):
+                        yield run.buffer[next_seq]
+                        next_seq += 1
+                    break
+                continue
+            if seq is None:                  # mid-run sentinel — drain may
+                # have ended, but a wake might still revive us. Flush tail of
+                # this segment, then decide whether to wait for a wake.
+                while next_seq < len(run.buffer):
                     yield run.buffer[next_seq]
                     next_seq += 1
-                break
-            if seq >= next_seq:        # skip events already replayed from the buffer
+                # Only wait through the sentinel if there's a pending wake
+                # registered for this session — otherwise (chat-mode turn,
+                # one-shot reply) we'd sit idle for 30 s before closing,
+                # which the user sees as "the stream is still going" after
+                # a simple "yo". A pending wake means: a cookbook
+                # continuation or a timer continuation is on the books and
+                # bg_monitor will fire it within seconds.
+                _has_pending_wake = False
+                try:
+                    from src import agent_continuations as _ac
+                    _rows = _ac._load()
+                    for _r in _rows.values():
+                        if (_r.get("session_id") == session_id
+                                and _r.get("status") == "waiting"
+                                and not _r.get("followed_up")):
+                            _has_pending_wake = True
+                            break
+                except Exception:
+                    pass
+                if not _has_pending_wake:
+                    break
+                # Wait up to _RESUME_GRACE_S for a wake to flip status back
+                # to "running". If nothing happens, we're truly done.
+                deadline = asyncio.get_event_loop().time() + _RESUME_GRACE_S
+                while asyncio.get_event_loop().time() < deadline:
+                    if run.status == "running":
+                        break
+                    await asyncio.sleep(0.5)
+                if run.status != "running":
+                    while next_seq < len(run.buffer):
+                        yield run.buffer[next_seq]
+                        next_seq += 1
+                    break
+                continue
+            if seq >= next_seq:              # skip events already replayed
                 yield ev
                 next_seq = seq + 1
     finally:

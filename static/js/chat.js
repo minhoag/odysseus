@@ -47,6 +47,10 @@ import createResearchSynapse from './researchSynapse.js';
   let _autoNudges = 0;             // handshakes fired for the CURRENT user turn
   let _autoContinuePending = false; // marks the next submit as an auto-continue (don't reset the counter)
   const _AUTO_NUDGE_CAP = 3;
+  const PROMPT_HISTORY_KEY = 'odysseus-chat-prompt-history';
+  const PROMPT_HISTORY_LIMIT = 50;
+  let _promptHistoryIndex = null;
+  let _promptHistoryDraft = '';
 
   // shortModel and modelColor are now in chatRenderer.js
   var _shortModel = chatRenderer.shortModel;
@@ -156,6 +160,7 @@ import createResearchSynapse from './researchSynapse.js';
   export function init(apiBase) {
     API_BASE = apiBase;
     initSlashCommands({ apiBase, isStreaming: () => isStreaming });
+    _initPromptHistoryNavigation();
     // Initialize email inbox
     emailInbox.init(documentModule);
     // Wire the slash-command autocomplete popup on the chat composer. The
@@ -231,6 +236,75 @@ import createResearchSynapse from './researchSynapse.js';
   // API key pattern for the guard in handleChatSubmit
   const API_KEY_RE = /^(sk-[a-zA-Z0-9_\-]{20,}|gsk_[a-zA-Z0-9]{20,}|AIza[a-zA-Z0-9_\-]{30,}|xai-[a-zA-Z0-9]{20,})$/;
 
+  function _loadPromptHistory() {
+    try {
+      const rows = JSON.parse(localStorage.getItem(PROMPT_HISTORY_KEY) || '[]');
+      return Array.isArray(rows) ? rows.filter(x => typeof x === 'string' && x.trim()) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function _savePromptToHistory(text) {
+    const value = String(text || '').trim();
+    if (!value) return;
+    const rows = _loadPromptHistory().filter(x => x !== value);
+    rows.push(value);
+    while (rows.length > PROMPT_HISTORY_LIMIT) rows.shift();
+    try { localStorage.setItem(PROMPT_HISTORY_KEY, JSON.stringify(rows)); } catch (_) {}
+    _promptHistoryIndex = null;
+    _promptHistoryDraft = '';
+  }
+
+  function _setPromptInputValue(input, value) {
+    input.value = value || '';
+    input.selectionStart = input.selectionEnd = input.value.length;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    if (uiModule.autoResize) uiModule.autoResize(input);
+    if (window._syncModelPickerAutohide) window._syncModelPickerAutohide();
+  }
+
+  function _initPromptHistoryNavigation() {
+    const input = document.getElementById('message');
+    if (!input || input.dataset.promptHistoryBound === '1') return;
+    input.dataset.promptHistoryBound = '1';
+    input.addEventListener('input', () => {
+      if (_promptHistoryIndex === null) _promptHistoryDraft = '';
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.isComposing || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      const rows = _loadPromptHistory();
+      if (!rows.length) return;
+      const value = input.value || '';
+      const atStart = input.selectionStart === 0 && input.selectionEnd === 0;
+      const atEnd = input.selectionStart === value.length && input.selectionEnd === value.length;
+      if (e.key === 'ArrowUp') {
+        if (value.trim() && !atStart && _promptHistoryIndex === null) return;
+        e.preventDefault();
+        if (_promptHistoryIndex === null) {
+          _promptHistoryDraft = value;
+          _promptHistoryIndex = rows.length - 1;
+        } else {
+          _promptHistoryIndex = Math.max(0, _promptHistoryIndex - 1);
+        }
+        _setPromptInputValue(input, rows[_promptHistoryIndex] || '');
+      } else {
+        if (_promptHistoryIndex === null) return;
+        if (value.trim() && !atEnd) return;
+        e.preventDefault();
+        if (_promptHistoryIndex >= rows.length - 1) {
+          _promptHistoryIndex = null;
+          _setPromptInputValue(input, _promptHistoryDraft || '');
+          _promptHistoryDraft = '';
+        } else {
+          _promptHistoryIndex += 1;
+          _setPromptInputValue(input, rows[_promptHistoryIndex] || '');
+        }
+      }
+    });
+  }
+
 
   /**
    * Handle chat form submission
@@ -254,8 +328,36 @@ import createResearchSynapse from './researchSynapse.js';
       return;
     }
 
-    // If currently streaming, stop it
+    // If currently streaming AND the user has typed something, treat it
+    // as a queued message (don't cancel the stream). The backend injects
+    // queued messages at the next agent round boundary so the user can
+    // direct the agent mid-chain without waiting for the whole chain to
+    // finish. Empty input + send while streaming still acts as Stop.
     if (isStreaming) {
+      const _inputEl = document.getElementById('message');
+      const _pending = (_inputEl?.value || '').trim();
+      if (_pending && sessionId) {
+        try {
+          _savePromptToHistory(_pending);
+          await fetch(`${API_BASE}/api/sessions/${sessionId}/queue`, {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: _pending }),
+          });
+          if (_inputEl) _inputEl.value = '';
+          // No optimistic bubble render. The message gets a real user
+          // bubble (and lands naturally between the agent's last tool
+          // output and the next round) only when the backend actually
+          // injects it via the `user_queued_inject` SSE event. A small
+          // toast confirms the queue so the user knows it landed.
+          if (uiModule.showToast) {
+            uiModule.showToast('Queued — runs at next tool boundary', 1800);
+          }
+        } catch (e) {
+          console.warn('queue submit failed', e);
+        }
+        return;
+      }
       // Cancel server-side research if in progress
       const _cancelSid = sessionModule.getCurrentSessionId();
       if (_cancelSid && _researchingStreamIds.has(_cancelSid)) {
@@ -493,6 +595,7 @@ import createResearchSynapse from './researchSynapse.js';
 
     const messageInput = el('message');
     const originalBtnText = submitBtn ? submitBtn.innerHTML : '';
+    _savePromptToHistory(msg);
 
     // Re-enable the textarea now that we've handed off to the stream: the
     // user wants to compose the next message while the AI is still talking.
@@ -948,6 +1051,21 @@ import createResearchSynapse from './researchSynapse.js';
         try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; }
         catch { return ''; }
       })();
+      // Kill any countdown chips left over from a previous turn — when the
+      // user sends a new message, any prior "Waiting on Download — 4:32"
+      // chip is stale and its embedded tryResume() would otherwise
+      // re-subscribe to agent_runs and render a "Thinking" spinner on top
+      // of the new reply. Server already cancels the matching wakes via
+      // cancel_for_session; this is the visual mirror so the chat is clean.
+      try {
+        const _hist = document.getElementById('chat-history');
+        if (_hist) {
+          _hist.querySelectorAll('.continuation-countdown').forEach(_c => {
+            try { if (_c._timer) { clearInterval(_c._timer); _c._timer = null; } } catch (_) {}
+            _c.remove();
+          });
+        }
+      } catch (_) {}
       const res = await fetch(`${API_BASE}/api/chat_stream`, {
         method: 'POST',
         body: fd,
@@ -1042,11 +1160,14 @@ import createResearchSynapse from './researchSynapse.js';
         }
       };
 
-      // Tool-aware thinking spinner
+      // Tool-aware thinking spinner. Plain labels — earlier the web_search
+      // label embedded a raw SVG icon, but the renderer downstream pipes
+      // tool labels through `esc()` (template-literal escaping) which
+      // turned `<svg>` into `&lt;svg&gt;` and dumped the literal markup
+      // as text on screen.
       let _lastToolName = '';
-      const _searchIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:-2px;margin-right:4px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
       const _toolLabels = {
-        'web_search': _searchIcon + 'Searching',
+        'web_search': 'Searching',
         'bash': 'Running',
         'python': 'Running',
         'create_document': 'Writing',
@@ -1177,7 +1298,7 @@ import createResearchSynapse from './researchSynapse.js';
             }
           }
           if (replyTrimmed) {
-            const replyHtml = markdownModule.mdToHtml(markdownModule.squashOutsideCode(replyTrimmed));
+            const replyHtml = markdownModule.processWithThinking(markdownModule.squashOutsideCode(replyTrimmed));
             const prevLen = liveReply._prevTextLen || 0;
             liveReply.innerHTML = replyHtml;
             _fadeNewTokens(liveReply, prevLen);
@@ -1199,10 +1320,34 @@ import createResearchSynapse from './researchSynapse.js';
             .trim();
           const lines = thinkContent.split('\n').length;
           // Don't show beforeThink text during streaming — it'll appear in the final render
-          // This prevents the "split into two" duplication
+          // This prevents the "split into two" duplication.
+          //
+          // Show a live tail of the reasoning content so the user can see
+          // progress while the model thinks. Without this, a thinking model
+          // running slowly on CPU (Gemma 4 31B at ~7 tok/s) looks frozen
+          // for a minute or more while it emits hidden reasoning before
+          // the visible answer.
+          const _thinkTail = thinkContent.slice(-280)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const _tokenLabel = thinkContent.length > 0
+            ? `Thinking… ${thinkContent.length} chars` + (lines > 1 ? `, ${lines} lines` : '')
+            : 'Thinking…';
+          // Match the shape of the "View thinking process" finished header
+          // (left text + right-side spinner/timer/toggle placeholders) so
+          // the two thinking UIs look identical. The right-side slots are
+          // visual placeholders during the streaming repaint — they get
+          // wired up properly once the round-holder's live-thinking handler
+          // takes over.
           contentEl.innerHTML =
-            '<div class="thinking-section"><div class="thinking-header"><div class="thinking-header-left">Thinking' +
-            (lines > 1 ? ` (${lines} lines)` : '') + '</div></div></div>';
+            '<div class="thinking-section">' +
+              '<div class="thinking-header">' +
+                '<div class="thinking-header-left"><span class="live-think-header-text">' + _tokenLabel + '</span></div>' +
+                '<span class="live-think-spinner-slot" style="flex-shrink:0;margin-left:auto;"></span>' +
+                '<span class="live-think-timer" style="font-size:11px;opacity:0.4;font-variant-numeric:tabular-nums;margin-left:6px;margin-right:5px;"></span>' +
+                '<span class="thinking-toggle live-think-toggle"></span>' +
+              '</div>' +
+              '<div class="thinking-stream-preview" style="margin-top:6px;padding:6px 10px;font-size:11.5px;line-height:1.35;background:rgba(255,255,255,0.04);border-left:2px solid var(--accent,#5b8abf);border-radius:3px;opacity:0.85;white-space:pre-wrap;max-height:120px;overflow-y:auto;font-family:var(--mono,ui-monospace,monospace);">' + _thinkTail + '</div>' +
+            '</div>';
           contentEl._prevTextLen = 0;
           uiModule.scrollHistory();
           return;
@@ -1265,6 +1410,19 @@ import createResearchSynapse from './researchSynapse.js';
 
       let _nextIsError = false;
       let _streamSawDone = false;
+
+      function _appendLiveTaskCompletedMarker() {
+        const text = roundText || accumulated || '';
+        if (!/(?:^|\n)\s*\[DONE\]\s*$/i.test(text)) return;
+        const body = roundHolder && roundHolder.querySelector ? roundHolder.querySelector('.body') : null;
+        if (!body || body.querySelector('.task-completed-marker')) return;
+        body.insertAdjacentHTML('beforeend',
+          '<div class="task-completed-marker" role="status" aria-label="Task completed">'
+          + '<span class="task-completed-icon" aria-hidden="true">'
+          + '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+          + '</span><span>Task completed</span></div>'
+        );
+      }
 
       while (true) {
         const { done, value } = await reader.read();
@@ -1333,6 +1491,7 @@ import createResearchSynapse from './researchSynapse.js';
                 // will detect 'completed' and reload history cleanly
                 break;
               }
+              if (!_isBg) _appendLiveTaskCompletedMarker();
               // Force-close thinking if still open (model never output boundary)
               if (isThinking) {
                 isThinking = false;
@@ -1373,7 +1532,13 @@ import createResearchSynapse from './researchSynapse.js';
                   _streamElDone.appendChild(_replyElDone);
                 }
               }
-              // Normal foreground completion — metrics will be displayed in the final render block below
+              // Normal foreground completion — metrics will be displayed in the final render block below.
+              // CRITICAL: cancel the deferred thinking-spinner timer so a
+              // pending _scheduleThinkingSpinner (400 ms after the last
+              // delta) doesn't fire AFTER [DONE], leaving a phantom
+              // "Thinking ▆▅▄" at the bottom of a finished chat reply.
+              _cancelThinkingTimer();
+              _removeThinkingSpinner();
               break;
             }
             try {
@@ -1387,7 +1552,7 @@ import createResearchSynapse from './researchSynapse.js';
                 typewriterInto(roundHolder.querySelector('.body'), errMsg);
                 break;
               }
-              if (json.delta || json.type === 'tool_start' || json.type === 'tool_output' || json.type === 'tool_progress' || json.type === 'agent_step' || json.type === 'doc_stream_open' || json.type === 'doc_stream_delta' || json.type === 'research_progress') {
+              if (json.delta || json.type === 'tool_start' || json.type === 'tool_output' || json.type === 'tool_progress' || json.type === 'agent_step' || json.type === 'agent_notice' || json.type === 'continuation_wait' || json.type === 'task_checklist' || json.type === 'task_completed' || json.type === 'supervisor_step' || json.type === 'doc_stream_open' || json.type === 'doc_stream_delta' || json.type === 'research_progress' || json.type === 'bg_task_progress') {
                 clearResponseTimeout();
                 clearProcessingProbe();
               }
@@ -2087,6 +2252,47 @@ import createResearchSynapse from './researchSynapse.js';
                 // user doesn't stare at a blind "Running…" spinner.
                 if (_isBg) continue;
                 if (!currentToolBubble) continue;
+                // Backend watchdog tick: `still_running: true` + elapsed_s
+                // means "no completion yet, just announcing presence at the
+                // next backoff interval." Render a chip so the user sees the
+                // tool is genuinely alive and not silently hung.
+                if (json.still_running && Number.isFinite(json.elapsed_s)) {
+                  let stillEl = currentToolBubble.querySelector('.agent-thread-still');
+                  if (!stillEl) {
+                    stillEl = document.createElement('div');
+                    stillEl.className = 'agent-thread-still';
+                    stillEl.style.cssText = 'margin:4px 0 0;padding:3px 8px;font-size:11px;background:rgba(255,200,0,0.12);border-left:2px solid var(--accent,#e8a30c);border-radius:3px;opacity:0.95;font-variant-numeric:tabular-nums;';
+                    const content = currentToolBubble.querySelector('.agent-thread-content');
+                    if (content) content.appendChild(stillEl);
+                  }
+                  const _fmtMS = (sec) => {
+                    const m = Math.floor(sec / 60);
+                    const s = Math.max(0, sec % 60);
+                    return m > 0 ? `${m}m ${s}s` : `${s}s`;
+                  };
+                  // Clear any prior countdown interval; we restart it with
+                  // each new still_running event (fresh next_check_s).
+                  if (stillEl._cd) { clearInterval(stillEl._cd); stillEl._cd = null; }
+                  const baseLabel = _fmtMS(json.elapsed_s);
+                  const elapsedStart = Date.now() - (json.elapsed_s * 1000);
+                  if (Number.isFinite(json.next_check_s)) {
+                    const nextCheckAbsS = Date.now() / 1000 + (json.next_check_s - json.elapsed_s);
+                    const render = () => {
+                      const elapsedNow = Math.max(0, Math.floor((Date.now() - elapsedStart) / 1000));
+                      const leftNow = Math.max(0, Math.ceil(nextCheckAbsS - Date.now() / 1000));
+                      stillEl.textContent = `Still running… ${_fmtMS(elapsedNow)} elapsed · next check in ${_fmtMS(leftNow)}`;
+                      if (leftNow <= 0 && stillEl._cd) {
+                        clearInterval(stillEl._cd);
+                        stillEl._cd = null;
+                      }
+                    };
+                    render();
+                    stillEl._cd = setInterval(render, 1000);
+                  } else {
+                    // Final tick / unknown next interval — just elapsed.
+                    stillEl.textContent = `Still running… ${baseLabel} elapsed`;
+                  }
+                }
                 // The per-second ticker (started in tool_start) owns the
                 // elapsed display; here we just surface the live output tail.
                 const tailStr = (json.tail || '').trim();
@@ -2209,6 +2415,23 @@ import createResearchSynapse from './researchSynapse.js';
                   window._manageMemoryTimer = setTimeout(
                     () => window.dispatchEvent(new CustomEvent('memory-refresh')), 600);
                 }
+                // --- Live-refresh model picker after the agent serves/stops
+                // a model via serve_model / stop_served_model. The backend
+                // auto-registers the endpoint, but the picker only re-fetches
+                // /api/models periodically — without this nudge the user
+                // doesn't see the newly-served model until they reopen the
+                // picker or refresh the page.
+                if (json.tool === 'serve_model' || json.tool === 'stop_served_model') {
+                  if (window._serveRefreshTimer) clearTimeout(window._serveRefreshTimer);
+                  window._serveRefreshTimer = setTimeout(() => {
+                    if (window.modelsModule && window.modelsModule.refreshModels) {
+                      window.modelsModule.refreshModels(true);
+                    }
+                    if (window.sessionModule && window.sessionModule.updateModelPicker) {
+                      window.sessionModule.updateModelPicker();
+                    }
+                  }, 800);
+                }
                 // --- Apply UI control actions embedded in tool_output ---
                 if (json.ui_event) {
                   chatStream.handleUIControl(json);
@@ -2261,6 +2484,273 @@ import createResearchSynapse from './researchSynapse.js';
                 if (_isBg) continue;
                 chatStream.handleUIControl(json.data || {});
 
+              } else if (json.type === 'user_queued_inject') {
+                // Backend drained a queued user message between rounds.
+                // Render a normal user chat bubble — it lands at the
+                // bottom of #chat-history, which is exactly the
+                // injection point between the last agent round and the
+                // next one. Matches the regular chat style automatically.
+                if (_isBg) continue;
+                try {
+                  const _txt = (json.message || '').trim();
+                  if (_txt && chatRenderer && chatRenderer.addMessage) {
+                    chatRenderer.addMessage('user', _txt, null,
+                      { _injected_mid_chain: true });
+                    uiModule.scrollHistory && uiModule.scrollHistory();
+                  }
+                } catch (_) {}
+
+              } else if (json.type === 'agent_notice') {
+                // Supervisor mechanisms (stream-idle, char-runaway, stream-
+                // break nudge, thinking-runaway, self-wake schedule) emit
+                // agent_notice events with a `message` field. Without a
+                // handler these were silently dropped — the supervisor
+                // was firing but the user saw a frozen "Thinking" with
+                // no explanation. Render as an inline yellow chip in the
+                // agent thread so the supervisor's work is visible.
+                if (_isBg) continue;
+                try {
+                  const msg = (json.message || '').toString();
+                  if (msg) {
+                    const _ncBox = document.getElementById('chat-history');
+                    let _ncThread = null;
+                    for (let ci = _ncBox.children.length - 1; ci >= Math.max(0, _ncBox.children.length - 5); ci--) {
+                      const ch = _ncBox.children[ci];
+                      if (ch.classList && ch.classList.contains('agent-thread')) { _ncThread = ch; break; }
+                      if (ch.classList && ch.classList.contains('msg') && ch.style.display !== 'none') break;
+                    }
+                    if (!_ncThread) {
+                      _ncThread = document.createElement('div');
+                      _ncThread.className = 'agent-thread';
+                      _ncBox.appendChild(_ncThread);
+                    }
+                    const chip = document.createElement('div');
+                    chip.className = 'agent-thread-notice';
+                    chip.style.cssText = 'margin:6px 0;padding:6px 10px;font-size:12px;background:rgba(255,200,0,0.10);border-left:3px solid var(--accent,#e8a30c);border-radius:4px;opacity:0.95;';
+                    chip.textContent = msg;
+                    _ncThread.appendChild(chip);
+                    uiModule.scrollHistory && uiModule.scrollHistory();
+                  }
+                } catch (_) {}
+
+              } else if (json.type === 'task_checklist') {
+                if (_isBg) continue;
+                try {
+                  const items = Array.isArray(json.items) ? json.items : [];
+                  const box = document.getElementById('chat-history');
+                  let thread = null;
+                  for (let ci = box.children.length - 1; ci >= Math.max(0, box.children.length - 5); ci--) {
+                    const ch = box.children[ci];
+                    if (ch.classList && ch.classList.contains('agent-thread')) { thread = ch; break; }
+                    if (ch.classList && ch.classList.contains('msg') && ch.style.display !== 'none') break;
+                  }
+                  if (!thread) {
+                    thread = document.createElement('div');
+                    thread.className = 'agent-thread';
+                    box.appendChild(thread);
+                  }
+                  let card = thread.querySelector('.agent-task-checklist');
+                  if (!card) {
+                    card = document.createElement('div');
+                    card.className = 'agent-thread-notice agent-task-checklist';
+                    card.style.cssText = 'margin:6px 0;padding:8px 10px;font-size:12px;background:rgba(120,180,120,0.10);border-left:3px solid var(--accent,#63b36c);border-radius:4px;';
+                    thread.appendChild(card);
+                  }
+                  const esc = (s) => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+                  const icon = (st) => st === 'done' ? '✓' : (st === 'waiting' ? '◷' : (st === 'failed' ? '✕' : '•'));
+                  card.innerHTML = '<div style="font-weight:600;margin-bottom:5px;">Task checklist</div>'
+                    + items.map(it => `<div style="display:flex;gap:7px;align-items:flex-start;margin:3px 0;"><span style="width:14px;text-align:center;">${icon(it.status)}</span><span>${esc(it.label || it.id)} <span style="opacity:.55;">${esc(it.status || 'pending')}</span></span></div>`).join('');
+                  uiModule.scrollHistory && uiModule.scrollHistory();
+                } catch (_) {}
+
+              } else if (json.type === 'task_completed') {
+                if (_isBg) continue;
+                try {
+                  const body = roundHolder && roundHolder.querySelector ? roundHolder.querySelector('.body') : null;
+                  if (body && !body.querySelector('.task-completed-marker')) {
+                    body.insertAdjacentHTML('beforeend',
+                      '<div class="task-completed-marker" role="status" aria-label="Task completed">'
+                      + '<span class="task-completed-icon" aria-hidden="true">'
+                      + '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+                      + '</span><span>Task completed</span></div>'
+                    );
+                  }
+                } catch (_) {}
+
+              } else if (json.type === 'bg_task_progress') {
+                if (_isBg) continue;
+                try {
+                  // Live background download/serve progress card. The
+                  // server publishes these from src/bg_task_progress.py
+                  // while a cookbook task runs on a remote machine, so
+                  // the user sees what's happening instead of staring at
+                  // a silent stream until the wake fires.
+                  const _bpBox = document.getElementById('chat-history');
+                  let _bpThread = null;
+                  for (let ci = _bpBox.children.length - 1; ci >= Math.max(0, _bpBox.children.length - 5); ci--) {
+                    const ch = _bpBox.children[ci];
+                    if (ch.classList && ch.classList.contains('agent-thread')) { _bpThread = ch; break; }
+                    if (ch.classList && ch.classList.contains('msg') && ch.style.display !== 'none') break;
+                  }
+                  if (!_bpThread) {
+                    _bpThread = document.createElement('div');
+                    _bpThread.className = 'agent-thread';
+                    _bpBox.appendChild(_bpThread);
+                  }
+                  const cbSid = json.session || '';
+                  // One card per cookbook session — updates in place rather
+                  // than spamming a new card every poll.
+                  let _bpCard = _bpThread.querySelector(`[data-bg-progress="${cbSid}"]`);
+                  if (!_bpCard) {
+                    _bpCard = document.createElement('div');
+                    _bpCard.className = 'agent-thread-notice bg-task-progress';
+                    _bpCard.dataset.bgProgress = cbSid;
+                    _bpCard.style.cssText = 'margin:6px 0;padding:8px 10px;font-size:11px;background:rgba(80,160,255,0.08);border-left:3px solid var(--accent,#4da3ff);border-radius:4px;font-variant-numeric:tabular-nums;';
+                    _bpThread.appendChild(_bpCard);
+                  }
+                  const esc = (s) => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+                  const _toolNm = esc(json.tool || 'background task');
+                  const _model = esc(json.model || '');
+                  const _host = esc(json.host || '');
+                  const _status = esc(json.status || '?');
+                  const _statusColor = (json.status || '').toLowerCase() === 'completed' ? '#5fb35f'
+                    : (['error','failed','crashed','killed'].includes((json.status || '').toLowerCase()) ? '#e57373' : 'inherit');
+                  const _tail = String(json.tail || '').slice(-500);
+                  _bpCard.innerHTML =
+                    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:600;margin-bottom:4px;">'
+                    + `<span>${_toolNm}</span>`
+                    + (_model ? `<span style="opacity:0.7;">${_model}</span>` : '')
+                    + (_host ? `<span style="opacity:0.55;">@${_host}</span>` : '')
+                    + `<span style="margin-left:auto;color:${_statusColor};">${_status}</span>`
+                    + '</div>'
+                    + (_tail ? `<pre style="margin:0;font-family:'Berkeley Mono','SF Mono','Fira Code',monospace;font-size:10px;opacity:0.7;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto;">${esc(_tail)}</pre>` : '');
+                  uiModule.scrollHistory && uiModule.scrollHistory();
+                } catch (_) {}
+
+              } else if (json.type === 'continuation_wait') {
+                if (_isBg) continue;
+                try {
+                  const total = Math.max(1, parseInt(json.seconds || 0, 10) || 1);
+                  const started = Date.now();
+                  const _cwBox = document.getElementById('chat-history');
+                  let _cwThread = null;
+                  for (let ci = _cwBox.children.length - 1; ci >= Math.max(0, _cwBox.children.length - 5); ci--) {
+                    const ch = _cwBox.children[ci];
+                    if (ch.classList && ch.classList.contains('agent-thread')) { _cwThread = ch; break; }
+                    if (ch.classList && ch.classList.contains('msg') && ch.style.display !== 'none') break;
+                  }
+                  if (!_cwThread) {
+                    _cwThread = document.createElement('div');
+                    _cwThread.className = 'agent-thread';
+                    _cwBox.appendChild(_cwThread);
+                  }
+                  const chip = document.createElement('div');
+                  chip.className = 'agent-thread-notice continuation-countdown';
+                  chip.style.cssText = 'margin:6px 0;padding:7px 10px;font-size:12px;background:rgba(80,160,255,0.10);border-left:3px solid var(--accent,#4da3ff);border-radius:4px;opacity:0.95;font-variant-numeric:tabular-nums;';
+                  const _waitLabel = (json.item_label || '').toString().trim();
+                  const _waitSid = json.session_id || (sessionModule.getCurrentSessionId && sessionModule.getCurrentSessionId()) || '';
+                  // "Continue now" button — skips the remaining wait by
+                  // calling /api/chat/continue/{sid} which fast-tracks every
+                  // pending continuation to due_at=now. Useful when the model
+                  // set a 60-min agent_wait but the work probably finished
+                  // already (or the user just wants to nudge it).
+                  const _contBtn = document.createElement('button');
+                  _contBtn.type = 'button';
+                  _contBtn.className = 'continuation-skip-btn';
+                  _contBtn.style.cssText = 'margin-left:10px;padding:2px 8px;font-size:11px;border:1px solid var(--accent,#4da3ff);background:transparent;color:var(--accent,#4da3ff);border-radius:3px;cursor:pointer;font-family:inherit;';
+                  _contBtn.textContent = 'Continue now';
+                  _contBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    _contBtn.disabled = true;
+                    _contBtn.textContent = 'Skipping…';
+                    try {
+                      const r = await fetch(`${API_BASE}/api/chat/continue/${_waitSid}`, { method: 'POST', credentials: 'same-origin' });
+                      if (r.ok) {
+                        const d = await r.json().catch(() => ({}));
+                        _contBtn.textContent = d && d.fired ? `Skipped — agent resuming` : 'Nothing to skip';
+                        // Speed up the countdown to fire immediately
+                        if (chip._timer) {
+                          clearInterval(chip._timer);
+                          chip._timer = null;
+                          chip.textContent = 'Resuming agent stream live…';
+                        }
+                      } else {
+                        _contBtn.textContent = 'Skip failed';
+                      }
+                    } catch (_) {
+                      _contBtn.textContent = 'Skip failed';
+                    }
+                  });
+                  const renderWait = () => {
+                    const elapsed = Math.floor((Date.now() - started) / 1000);
+                    const left = Math.max(0, total - elapsed);
+                    const mm = String(Math.floor(left / 60));
+                    const ss = String(left % 60).padStart(2, '0');
+                    if (left > 0) {
+                      // Label the chip with WHAT we're waiting on so the user
+                      // sees "Waiting on Download (qwen3.6) — 4:32" rather
+                      // than a bare timer with no context.
+                      chip.textContent = _waitLabel
+                        ? `Waiting on ${_waitLabel} — ${mm}:${ss}`
+                        : `Waiting ${mm}:${ss} before the next check...`;
+                    } else {
+                      chip.textContent = 'Wait finished; resuming agent live...';
+                    }
+                    if (left <= 0 && chip._timer) {
+                      clearInterval(chip._timer);
+                      chip._timer = null;
+                      const sid = json.session_id || (sessionModule.getCurrentSessionId && sessionModule.getCurrentSessionId());
+                      if (sid && !chip._resumeStarted) {
+                        chip._resumeStarted = true;
+                        let attempts = 0;
+                        const tryResume = async () => {
+                          attempts += 1;
+                          if (hasActiveStream(sid)) {
+                            chip.textContent = 'Resumed agent stream live.';
+                            return;
+                          }
+                          // resumeStream returns false (NOT throws) when the
+                          // wake-run hasn't registered in agent_runs yet
+                          // (bg_monitor polls every ~5s; the countdown ends
+                          // before that poll fires). The old catch-only retry
+                          // gave up immediately on a falsy return — leaving
+                          // the user watching a "Resumed" chip with no events
+                          // actually streaming. Treat falsy return as a retry
+                          // trigger too, up to ~60s of attempts.
+                          let ok = false;
+                          try {
+                            ok = await resumeStream(sid);
+                          } catch (_) { ok = false; }
+                          if (ok) {
+                            // Honest text: the resume subscription is open
+                            // but the wake-run may not have started yet
+                            // (the cookbook task is still running on a
+                            // remote machine). The bg_task_progress card
+                            // below this chip shows actual activity; this
+                            // chip just confirms we're connected.
+                            chip.textContent = 'Connected — watching for activity…';
+                            return;
+                          }
+                          if (attempts < 30) {
+                            chip.textContent = `Waiting for the agent to resume (try ${attempts}/30)…`;
+                            setTimeout(tryResume, 2000);
+                          } else {
+                            chip.textContent = 'Wait finished; refresh if the continuation is not visible.';
+                          }
+                        };
+                        setTimeout(tryResume, 1000);
+                      }
+                    }
+                  };
+                  renderWait();
+                  chip._timer = setInterval(renderWait, 1000);
+                  // Append the Continue button to the chip so the user can
+                  // skip the wait. setupContBtn declared above.
+                  if (_waitSid) chip.appendChild(_contBtn);
+                  _cwThread.appendChild(chip);
+                  uiModule.scrollHistory && uiModule.scrollHistory();
+                } catch (_) {}
+
               } else if (json.type === 'agent_step') {
                 if (_isBg) continue;
                 _cancelThinkingTimer();
@@ -2303,6 +2793,46 @@ import createResearchSynapse from './researchSynapse.js';
                 }
                 if (streamingTTS) window.aiTTSManager._streamSentencesSent = 0;
                 uiModule.scrollHistory();
+              } else if (json.type === 'supervisor_step') {
+                // Supervisor ladder rung event — render as a visible inline
+                // card in the agent thread so the user can see verify →
+                // different-method → teacher → stop escalation happening
+                // instead of the model silently re-trying. Reuses the
+                // existing agent-thread-node chrome for visual consistency.
+                if (_isBg) continue;
+                _cancelThinkingTimer();
+                _removeThinkingSpinner();
+                _renderStream();
+                const _supChatBox = document.getElementById('chat-history');
+                // Find or create the agent-thread container — same lookup
+                // as tool_start so rung cards sit alongside tool cards.
+                let _supThread = null;
+                for (let ci = _supChatBox.children.length - 1; ci >= Math.max(0, _supChatBox.children.length - 5); ci--) {
+                  const ch = _supChatBox.children[ci];
+                  if (ch.classList.contains('agent-thread')) { _supThread = ch; break; }
+                  if (ch.classList.contains('msg') && ch.style.display !== 'none') break;
+                }
+                if (!_supThread) {
+                  _supThread = document.createElement('div');
+                  _supThread.className = 'agent-thread';
+                  _supChatBox.appendChild(_supThread);
+                }
+                const _rungLabels = {
+                  verify: 'Verifier',
+                  different_method: 'Trying a different approach',
+                  teacher: 'Asking teacher model',
+                  stop: 'Stopping — see blocker below',
+                };
+                const _rung = String(json.rung || '');
+                const _label = _rungLabels[_rung] || ('Supervisor: ' + _rung);
+                const _reason = json.reason ? `<pre class="agent-thread-cmd">${esc(json.reason)}</pre>` : '';
+                const _supNode = document.createElement('div');
+                _supNode.className = 'agent-thread-node supervisor-step running';
+                _supNode.dataset.rung = _rung;
+                _supNode.innerHTML = `<div class="agent-thread-dot"></div><div class="agent-thread-header"><span class="agent-thread-icon">◆</span><span class="agent-thread-tool">${esc(_label)}</span></div><div class="agent-thread-content">${_reason}</div>`;
+                _supThread.appendChild(_supNode);
+                uiModule.scrollHistory();
+
               } else if (json.type === 'budget_exceeded') {
                 if (_isBg) continue;
                 _cancelThinkingTimer();
@@ -2489,7 +3019,7 @@ import createResearchSynapse from './researchSynapse.js';
           }
           if (_liveReplyEl && _finalReply) {
             // Render reply into the live-reply container (thinking bar already showing)
-            var _replyHtml = markdownModule.mdToHtml(markdownModule.squashOutsideCode(_finalReply));
+            var _replyHtml = markdownModule.processWithThinking(markdownModule.squashOutsideCode(_finalReply));
             _liveReplyEl.innerHTML = _replyHtml;
             _liveReplyEl.classList.remove('live-reply-content');
             if (_sourcesData) {
@@ -2925,17 +3455,33 @@ import createResearchSynapse from './researchSynapse.js';
   // the server run — otherwise closing the tab would kill the background task,
   // defeating the whole point. Only the Stop button cancels the server run.
   export function abortCurrentRequest(stopServer = false) {
+    // Abort the foreground stream...
     if (currentAbort) {
       currentAbort.abort();
       // Don't set to null here - let catch block handle it
     }
+    // ...AND any background streams. Previously, a stream that had been
+    // backgrounded (user switched chats, stream kept running so the bg
+    // map kept its abortCtrl) couldn't be stopped from anywhere — the
+    // Stop button only knew about `currentAbort`. Now hitting Stop
+    // kills every live stream the client is tracking and tells the
+    // server to cancel each one too.
+    const _killedSids = new Set();
+    try {
+      _backgroundStreams.forEach((entry, sid) => {
+        try { entry?.abortCtrl?.abort(); } catch (_) {}
+        _killedSids.add(sid);
+      });
+    } catch (_) {}
     if (stopServer) {
       try {
         const _sid = _streamSessionId
           || (window.sessionModule && window.sessionModule.getCurrentSessionId && window.sessionModule.getCurrentSessionId());
-        if (_sid) {
-          fetch(`/api/chat/stop/${encodeURIComponent(_sid)}`, { method: 'POST', credentials: 'same-origin' }).catch(() => {});
-        }
+        if (_sid) _killedSids.add(_sid);
+        _killedSids.forEach(sid => {
+          if (!sid) return;
+          fetch(`/api/chat/stop/${encodeURIComponent(sid)}`, { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+        });
       } catch (_) {}
     }
   }
@@ -3197,7 +3743,7 @@ import createResearchSynapse from './researchSynapse.js';
 
     const renderDelta = () => {
       const dt = stripToolBlocks(roundText);
-      contentDiv.innerHTML = markdownModule.mdToHtml(markdownModule.squashOutsideCode(dt));
+      contentDiv.innerHTML = markdownModule.processWithThinking(markdownModule.squashOutsideCode(dt));
       uiModule.scrollHistory();
     };
 
