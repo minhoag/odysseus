@@ -752,9 +752,37 @@ def _ping_endpoint(base_url: str, api_key: str = None, timeout: float = 1.5) -> 
     except Exception:
         pass
 
+    # OpenAI-compatible servers (vLLM, llama.cpp, SGLang, lmdeploy, …) expose
+    # /v1/models but return 404 on the bare /v1 root. The probe used to GET
+    # the base URL only, so a fully-working vLLM endpoint (chats fine!) read
+    # as offline because /v1 → 404. Try /models first; fall back to the base
+    # URL only if /models couldn't be reached (TCP-level failure).
+    models_url = build_models_url(base)
+    try:
+        r = httpx.get(models_url, headers=headers, timeout=timeout, verify=llm_verify())
+        result = _result_from_response(r)
+        if result["reachable"]:
+            return result
+        last_error = result.get("error")
+    except Exception as e:
+        last_error = str(e)[:120]
+
     try:
         r = httpx.get(base, headers=headers, timeout=timeout, verify=llm_verify())
-        return _result_from_response(r)
+        result = _result_from_response(r)
+        if result["reachable"]:
+            return result
+        # 4xx from a reachable HTTP server (404 /v1, 401/403 missing key) is
+        # still proof the upstream is alive. Only treat connection-level
+        # failures, 5xx, and redirect-to-/login as truly offline.
+        sc = result.get("status_code") or 0
+        if 400 <= sc < 500 and sc not in (407, 408, 421, 425, 429):
+            return {
+                "reachable": True,
+                "status_code": sc,
+                "error": None,
+            }
+        last_error = result.get("error") or last_error
     except Exception as e:
         last_error = str(e)[:120]
 
@@ -1169,7 +1197,14 @@ def setup_model_routes(model_discovery):
             t0 = _time.time()
             try:
                 import asyncio as _asyncio
-                ping = await _asyncio.to_thread(_ping_endpoint, data["base"], data.get("api_key"), 1.5)
+                # Bumped 1.5s → 3.5s. The previous 1.5s budget was clipping
+                # local vLLM endpoints on Tailscale links where the model
+                # server is still loading (Qwen3.5-122B takes 2–3 min to
+                # warm); /v1/models can take 500–2500 ms on a busy box,
+                # which pushed _ping_endpoint's full path-discovery sweep
+                # past the cap and marked the row offline despite the
+                # user actively chatting with it.
+                ping = await _asyncio.to_thread(_ping_endpoint, data["base"], data.get("api_key"), 3.5)
                 lat = round((_time.time() - t0) * 1000)
                 return {
                     "alive": bool(ping.get("reachable")),
@@ -1386,10 +1421,35 @@ def setup_model_routes(model_discovery):
                 # admin-pinned IDs that a probe would never surface.
                 status = "online" if (all_models or pinned) else "offline"
                 ping = None
+                # When cached_models is empty, do a quick reachability probe.
+                # Bumped 1.0s → 3.5s because the user reported endpoints they
+                # were ACTIVELY chatting with showed "offline" — the previous
+                # 1s timeout was clipping live cloud endpoints (DeepSeek can
+                # take 1.5–2.5s on /v1/models when their region is under load,
+                # vLLM on a remote GPU box behind SSH can also push past 1s).
+                # 3.5s still keeps the picker render snappy in the common
+                # "everything's already cached" path because this branch only
+                # runs for endpoints with an empty cached_models.
                 if not all_models and not pinned and r.is_enabled:
-                    ping = _ping_endpoint(r.base_url, r.api_key, timeout=1.0)
+                    ping = _ping_endpoint(r.base_url, r.api_key, timeout=3.5)
                     if ping.get("reachable"):
                         status = "empty"
+                        # Best-effort: if the probe came back reachable, try
+                        # to populate cached_models in the background so the
+                        # NEXT picker load shows "online" instead of "empty".
+                        # Failure here is silent — we already returned the
+                        # "empty" status, and the existing background refresh
+                        # path will eventually fill it in too.
+                        try:
+                            probed = _probe_endpoint(r.base_url, r.api_key, timeout=5)
+                            if probed:
+                                r.cached_models = json.dumps(probed)
+                                db.commit()
+                                all_models = probed
+                                visible = _visible_models(all_models, r.hidden_models, pinned)
+                                status = "online"
+                        except Exception as _refill_err:
+                            logger.debug(f"opportunistic cached_models refill failed for {r.id}: {_refill_err!r}")
                 base = _normalize_base(r.base_url)
                 kind = _effective_endpoint_kind(r, base)
                 results.append({
