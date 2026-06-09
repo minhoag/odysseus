@@ -41,5 +41,9 @@ mcp
 pyotp
 qrcode[pil]
 croniter
+# Google OAuth token loading for Gmail/Calendar integration (src/google_token_service.py).
+# Phase 1: file-backed credentials only; no browser flow libs needed yet.
+google-auth
+google-auth-oauthlib
 pytest
 pytest-asyncio

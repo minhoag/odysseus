@@ -132,10 +132,12 @@ def _list_accounts_raw() -> list:
         conn.row_factory = sqlite3.Row
         columns = {r[1] for r in conn.execute("PRAGMA table_info(email_accounts)").fetchall()}
         smtp_security_select = "smtp_security" if "smtp_security" in columns else "'' AS smtp_security"
+        auth_type_select = "auth_type" if "auth_type" in columns else "'password' AS auth_type"
         rows = conn.execute(f"""
             SELECT id, name, is_default, enabled,
                    imap_host, imap_port, imap_user, imap_password, imap_starttls,
-                   smtp_host, smtp_port, {smtp_security_select}, smtp_user, smtp_password, from_address
+                   smtp_host, smtp_port, {smtp_security_select}, smtp_user, smtp_password, from_address,
+                   {auth_type_select}
             FROM email_accounts WHERE enabled = 1
             ORDER BY is_default DESC, created_at ASC
         """).fetchall()
@@ -256,6 +258,7 @@ def _load_config(account: str | None = None) -> dict:
         cfg["smtp_user"] = row["smtp_user"] or cfg["smtp_user"]
         cfg["smtp_password"] = _decrypt(row["smtp_password"]) if row["smtp_password"] else cfg["smtp_password"]
         cfg["from_address"] = row["from_address"] or row["imap_user"] or cfg["from_address"]
+        cfg["auth_type"] = row.get("auth_type") or "password"
     else:
         # Legacy fallback: settings.json flat keys
         try:
@@ -310,8 +313,20 @@ def _imap_connect(account: str | None = None):
                 raise
     if getattr(conn, "sock", None):
         conn.sock.settimeout(EMAIL_SOCKET_TIMEOUT)
+    auth_type = cfg.get("auth_type") or "password"
     try:
-        conn.login(cfg["imap_user"], cfg["imap_password"])
+        if auth_type == "google_oauth":
+            from routes.email_helpers import _xoauth2_imap_authenticate
+            _xoauth2_sent = False
+            def _xoauth2_cb(_challenge):
+                nonlocal _xoauth2_sent
+                if _xoauth2_sent:
+                    return b""
+                _xoauth2_sent = True
+                return _xoauth2_imap_authenticate(cfg["imap_user"])
+            conn.authenticate("XOAUTH2", _xoauth2_cb)
+        else:
+            conn.login(cfg["imap_user"], cfg["imap_password"])
     except Exception:
         # A failed login otherwise orphans the connected socket; close it
         # before propagating (shutdown() is the pre-auth low-level close). (#3174)
@@ -871,7 +886,17 @@ def _smtp_connect(account=None, cfg=None):
             port,
             timeout=EMAIL_SOCKET_TIMEOUT,
         )
-    if cfg["smtp_user"] and cfg["smtp_password"]:
+    if cfg.get("auth_type") == "google_oauth":
+        from routes.email_helpers import _xoauth2_smtp_auth
+        try:
+            _xoauth2_smtp_auth(conn, cfg["smtp_user"])
+        except Exception:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            raise
+    elif cfg["smtp_user"] and cfg["smtp_password"]:
         try:
             conn.login(cfg["smtp_user"], cfg["smtp_password"])
         except Exception:

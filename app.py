@@ -707,6 +707,11 @@ from routes.email_routes import setup_email_routes
 email_router = setup_email_routes()
 app.include_router(email_router)
 
+# Google OAuth web flow — reuses the require_user dependency from
+# email_helpers and writes tokens that the existing XOAUTH2 path consumes.
+from routes.google_oauth_routes import setup_google_oauth_routes
+app.include_router(setup_google_oauth_routes())
+
 # Codex integration — HTTP surface for the Codex plugin/MCP bridge. Reuses
 # api_token scopes (todos:read|write, email:read|draft|send) so external
 # Codex sessions can only touch the data the user explicitly allowed. Mounted

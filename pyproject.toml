@@ -36,8 +36,10 @@ dependencies = [
     "pyotp",
     "qrcode[pil]",
     "croniter",
+    "google-auth",
     "pytest",
     "pytest-asyncio",
+    "google-auth-oauthlib>=1.4.0",
 ]
 
 [project.optional-dependencies]

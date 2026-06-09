@@ -49,6 +49,7 @@ from routes.email_helpers import (
     _fetch_sender_thread_context, _pre_retrieve_context,
     _EMAIL_REPLY_SYS_PROMPT_BASE, _POOL_HOOKS,
     _friendly_email_auth_error,
+    _xoauth2_imap_authenticate, _xoauth2_smtp_auth,
     SendEmailRequest, ExtractStyleRequest,
     ATTACHMENTS_DIR, COMPOSE_UPLOADS_DIR, SCHEDULED_DB,
     attachment_extract_dir, _email_cache_owner_clause,
@@ -2870,6 +2871,7 @@ def setup_email_routes():
                 "smtp_host": "smtp_host", "smtp_port": "smtp_port", "smtp_user": "smtp_user",
                 "smtp_security": "smtp_security", "imap_host": "imap_host", "imap_port": "imap_port", "imap_user": "imap_user",
                 "imap_starttls": "imap_starttls", "email_from": "from_address",
+                "auth_type": "auth_type",
             }
             for in_key, col_name in field_map.items():
                 if in_key in data:
@@ -2959,6 +2961,7 @@ def setup_email_routes():
                     "from_address": r.from_address or "",
                     "has_imap_password": bool(r.imap_password),
                     "has_smtp_password": bool(r.smtp_password),
+                    "auth_type": r.auth_type or "password",
                 })
             return {"accounts": out}
         finally:
@@ -2991,6 +2994,7 @@ def setup_email_routes():
                 smtp_user=(data.get("smtp_user") or "").strip(),
                 smtp_password=_enc(data.get("smtp_password") or ""),
                 from_address=(data.get("from_address") or "").strip(),
+                auth_type=data.get("auth_type") or "password",
                 # SECURITY: stamp the creator so all subsequent reads / mutations
                 # can filter by user. Without this every new account leaks to
                 # every other user.
@@ -3033,6 +3037,8 @@ def setup_email_routes():
                     setattr(row, key, int(data[key]))
             if "smtp_security" in data:
                 row.smtp_security = _smtp_security_mode({"smtp_security": data.get("smtp_security"), "smtp_port": data.get("smtp_port") or row.smtp_port})
+            if "auth_type" in data:
+                row.auth_type = data["auth_type"] or "password"
             for key in ("imap_starttls", "enabled"):
                 if key in data:
                     setattr(row, key, bool(data[key]))
@@ -3120,6 +3126,7 @@ def setup_email_routes():
                     "smtp_security": _smtp_security_mode({"smtp_security": getattr(row, "smtp_security", ""), "smtp_port": row.smtp_port}),
                     "smtp_user": row.smtp_user or "",
                     "smtp_password": _decrypt(row.smtp_password or ""),
+                    "auth_type": row.auth_type or "password",
                 }
                 for key, value in body.items():
                     if key == "account_id":
@@ -3138,17 +3145,18 @@ def setup_email_routes():
         imap_user = (body.get("imap_user") or "").strip()
         imap_pass = body.get("imap_password") or ""
         imap_starttls = bool(body.get("imap_starttls"))
+        auth_type = body.get("auth_type") or "password"
 
-        if not (imap_host and imap_user and imap_pass):
+        # Google OAuth accounts do not need a stored password; XOAUTH2 tokens
+        # come from the token service on disk.
+        has_credentials = (
+            auth_type == "google_oauth"
+            or (imap_host and imap_user and imap_pass)
+        )
+
+        if not has_credentials:
             imap_result = {"ok": False, "error": "Need IMAP host, username, and password"}
         else:
-            # Connection mode resolution:
-            #   STARTTLS on  → plain IMAP4 + .starttls() (upgrade)
-            #   STARTTLS off + port 993 → IMAP4_SSL (implicit SSL, "IMAPS")
-            #   STARTTLS off + any other port → plain IMAP4 (no encryption)
-            # Without the last branch, local servers exposed on a non-993
-            # port (Dovecot on 31143, etc.) would always fail the SSL
-            # handshake because they're not actually wrapped in TLS.
             try:
                 conn = _open_imap_connection(
                     imap_host,
@@ -3157,7 +3165,13 @@ def setup_email_routes():
                     timeout=_IMAP_TIMEOUT_SECONDS,
                 )
                 try:
-                    conn.login(imap_user, imap_pass)
+                    if auth_type == "google_oauth":
+                        conn.authenticate(
+                            "XOAUTH2",
+                            lambda _challenge: _xoauth2_imap_authenticate(imap_user),
+                        )
+                    else:
+                        conn.login(imap_user, imap_pass)
                     imap_result = {"ok": True}
                 finally:
                     try: conn.logout()
@@ -3179,7 +3193,10 @@ def setup_email_routes():
                     if smtp_security == "starttls":
                         smtp.starttls()
                 try:
-                    smtp.login(smtp_user, smtp_pass)
+                    if auth_type == "google_oauth":
+                        _xoauth2_smtp_auth(smtp, smtp_user)
+                    else:
+                        smtp.login(smtp_user, smtp_pass)
                     smtp_result = {"ok": True}
                 finally:
                     try: smtp.quit()

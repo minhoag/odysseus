@@ -328,7 +328,11 @@ def cmd_send(args) -> None:
         return
 
     with smtplib.SMTP_SSL(cfg["smtp_host"], int(cfg["smtp_port"] or 465)) as smtp:
-        smtp.login(cfg["smtp_user"], cfg["smtp_password"])
+        if cfg.get("auth_type") == "google_oauth":
+            from routes.email_helpers import _xoauth2_smtp_auth
+            _xoauth2_smtp_auth(smtp, cfg["smtp_user"])
+        else:
+            smtp.login(cfg["smtp_user"], cfg["smtp_password"])
         smtp.sendmail(cfg["from_address"], recipients, outer.as_string())
     emit({"ok": True, "from": cfg["from_address"], "recipients": recipients}, args)
 

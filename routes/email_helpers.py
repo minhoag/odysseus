@@ -38,6 +38,43 @@ from src.secret_storage import decrypt as _decrypt
 logger = logging.getLogger(__name__)
 
 
+# ── Gmail XOAUTH2 helpers ──
+
+def _build_xoauth2_string(email_addr: str, access_token: str) -> str:
+    """Build the XOAUTH2 client response per RFC 5801 / Gmail spec."""
+    return f"user={email_addr}\x01auth=Bearer {access_token}\x01\x01"
+
+
+def _get_google_access_token() -> str:
+    """Return a valid Google access token via the token service.
+
+    Raises visibly on missing/invalid credentials — no silent fallback.
+    """
+    from src.google_token_service import get_access_token, TokenLoadError
+    return get_access_token()
+
+
+def _xoauth2_imap_authenticate(email_addr: str) -> bytes:
+    """Return the XOAUTH2 callback result for IMAP .authenticate()."""
+    access_token = _get_google_access_token()
+    return _build_xoauth2_string(email_addr, access_token).encode("utf-8")
+
+
+def _xoauth2_smtp_auth(smtp: smtplib.SMTP, email_addr: str) -> None:
+    """Authenticate an open SMTP connection via XOAUTH2 AUTH command.
+
+    Raises RuntimeError when the server rejects the token (non-235).
+    """
+    import base64
+    access_token = _get_google_access_token()
+    auth_string = _build_xoauth2_string(email_addr, access_token)
+    encoded = base64.b64encode(auth_string.encode("utf-8")).decode("ascii")
+    smtp.ehlo_or_helo_if_needed()
+    code, _ = smtp.docmd("AUTH", "XOAUTH2 " + encoded)
+    if code != 235:
+        raise RuntimeError(f"SMTP XOAUTH2 AUTH rejected: server responded {code}")
+
+
 def _smtp_security_mode(cfg: dict) -> str:
     raw = str(cfg.get("smtp_security") or "").strip().lower()
     if raw in {"ssl", "starttls", "none"}:
@@ -55,10 +92,13 @@ def _send_smtp_message(cfg: dict, from_addr: str, recipients: list[str], message
     user = cfg.get("smtp_user") or ""
     password = cfg.get("smtp_password") or ""
     security = _smtp_security_mode(cfg)
+    auth_type = cfg.get("auth_type") or "password"
 
     if security == "ssl":
         with smtplib.SMTP_SSL(host, port, timeout=timeout) as smtp:
-            if user and password:
+            if auth_type == "google_oauth":
+                _xoauth2_smtp_auth(smtp, user)
+            elif user and password:
                 smtp.login(user, password)
             smtp.sendmail(from_addr, recipients, message)
         return
@@ -66,7 +106,9 @@ def _send_smtp_message(cfg: dict, from_addr: str, recipients: list[str], message
     with smtplib.SMTP(host, port, timeout=timeout) as smtp:
         if security == "starttls":
             smtp.starttls()
-        if user and password:
+        if auth_type == "google_oauth":
+            _xoauth2_smtp_auth(smtp, user)
+        elif user and password:
             smtp.login(user, password)
         smtp.sendmail(from_addr, recipients, message)
 
@@ -661,11 +703,14 @@ def _get_email_config(account_id: str | None = None, owner: str = "") -> dict:
                     "imap_password": _decrypt(row.imap_password or ""),
                     "imap_starttls": bool(row.imap_starttls),
                     "from_address": row.from_address or row.imap_user or "",
+                    "auth_type": getattr(row, "auth_type", "") or "password",
                 }
-                if not (cfg["smtp_host"] and cfg["smtp_user"] and cfg["smtp_password"]):
-                    logger.warning(f"SMTP not configured for account {row.name!r}")
-                if not (cfg["imap_host"] and cfg["imap_user"] and cfg["imap_password"]):
-                    logger.warning(f"IMAP not configured for account {row.name!r}")
+                _at = cfg["auth_type"]
+                if _at != "google_oauth":
+                    if not (cfg["smtp_host"] and cfg["smtp_user"] and cfg["smtp_password"]):
+                        logger.warning(f"SMTP not configured for account {row.name!r}")
+                    if not (cfg["imap_host"] and cfg["imap_user"] and cfg["imap_password"]):
+                        logger.warning(f"IMAP not configured for account {row.name!r}")
                 return cfg
         finally:
             db.close()
@@ -691,6 +736,7 @@ def _get_email_config(account_id: str | None = None, owner: str = "") -> dict:
         "imap_password": settings.get("imap_password", os.environ.get("IMAP_PASSWORD", "")),
         "imap_starttls": settings.get("imap_starttls", True),
         "from_address": settings.get("email_from", os.environ.get("EMAIL_FROM", "")),
+        "auth_type": "password",
     }
     if not (cfg["smtp_host"] and cfg["smtp_user"] and cfg["smtp_password"]):
         logger.warning("SMTP not configured — add an Email Account in Settings or set env vars")
@@ -781,7 +827,21 @@ def _imap_connect(account_id: str | None = None, owner: str = ""):
         timeout=_IMAP_TIMEOUT_SECONDS,
     )
     try:
-        conn.login(cfg["imap_user"], cfg["imap_password"])
+        auth_type = cfg.get("auth_type") or "password"
+        if auth_type == "google_oauth":
+            # IMAP XOAUTH2: the callback receives the server challenge.
+            # First call returns the XOAUTH2 payload; subsequent calls
+            # (Gmail error continuation) return empty so the failure completes.
+            _xoauth2_sent = False
+            def _xoauth2_cb(_challenge):
+                nonlocal _xoauth2_sent
+                if _xoauth2_sent:
+                    return b""
+                _xoauth2_sent = True
+                return _xoauth2_imap_authenticate(cfg["imap_user"])
+            conn.authenticate("XOAUTH2", _xoauth2_cb)
+        else:
+            conn.login(cfg["imap_user"], cfg["imap_password"])
     except Exception:
         # A failed AUTHENTICATE (e.g. an Office 365 app password on an
         # MFA-enabled tenant, #3174) otherwise orphans the already-connected

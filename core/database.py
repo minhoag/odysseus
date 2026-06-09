@@ -325,6 +325,9 @@ class EmailAccount(TimestampMixin, Base):
 
     from_address   = Column(String, default="")
 
+    # Authentication mode: "password" (default) or "google_oauth"
+    auth_type      = Column(String, default="password", nullable=False)
+
     __table_args__ = (
         Index('ix_email_accounts_owner_default', 'owner', 'is_default'),
     )
@@ -1662,6 +1665,7 @@ def init_db():
     _migrate_add_crew_member_id()
     _migrate_add_assistant_columns()
     _migrate_add_email_smtp_security()
+    _migrate_add_email_auth_type()
     _migrate_seed_email_account()
     _migrate_add_calendar_metadata()
     _migrate_add_calendar_is_utc()
@@ -1791,6 +1795,30 @@ def _migrate_add_email_smtp_security():
         conn.close()
     except Exception as e:
         logging.getLogger(__name__).warning(f"smtp_security migration skipped: {e}")
+
+
+def _migrate_add_email_auth_type():
+    """Add auth_type column to email_accounts for Google OAuth support."""
+    import sqlite3
+    db_path = DATABASE_URL.replace("sqlite:///", "")
+    if not os.path.exists(db_path):
+        return
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.execute("PRAGMA table_info(email_accounts)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if columns and "auth_type" not in columns:
+            conn.execute(
+                "ALTER TABLE email_accounts ADD COLUMN auth_type TEXT "
+                "DEFAULT 'password' NOT NULL"
+            )
+            conn.commit()
+            logging.getLogger(__name__).info(
+                "Migrated: added auth_type column to email_accounts"
+            )
+        conn.close()
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"auth_type migration skipped: {e}")
 
 
 def _migrate_encrypt_endpoint_keys():
