@@ -149,7 +149,7 @@ html {
 
 /* ── Density Overrides ── */
 
-:root.density-compact { font-size: 13px; }
+:root.density-compact { font-size: 14px; }
 :root.density-compact .msg { padding: 6px 10px; margin-bottom: 4px; }
 :root.density-compact .list-item { padding: 4px 8px; }
 :root.density-compact .sidebar .section { padding: 0; }
@@ -350,7 +350,7 @@ body.bg-pattern-sparkles {
     }
     .export-dropdown-menu.open { display: block; }
     .export-dropdown-item {
-      padding: 6px 8px; font-size: 11px; cursor: pointer;
+      padding: 6px 8px; font-size: 14px; cursor: pointer;
       border-radius: 6px; color: var(--fg); white-space: nowrap;
       display: flex; align-items: center; gap: 10px;
       transition: background 0.1s;
@@ -475,7 +475,7 @@ body.bg-pattern-sparkles {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 10px;
+      font-size: 14px;
       font-weight: 600;
       color: var(--fg);
       opacity: 0.7;
@@ -484,7 +484,7 @@ body.bg-pattern-sparkles {
     }
 
     .user-bar-name {
-      font-size: 9.75px;
+      font-size: 14px;
       font-weight: 500;
       color: var(--fg);
       opacity: 0.8;
@@ -1096,7 +1096,7 @@ body.bg-pattern-sparkles {
       opacity: 0;
       pointer-events: none;
       white-space: nowrap;
-      font-size: 11px;
+      font-size: 14px;
       font-weight: 600;
       color: var(--fg);
       background: var(--panel);
@@ -1150,7 +1150,7 @@ body.bg-pattern-sparkles {
       flex: 1; cursor: pointer; user-select: none;
       display: flex; align-items: center; gap: 6px;
       margin: 0; padding: 0; border: none;
-      font-size: 10px; font-weight: 400; font-family: inherit;
+      font-size: 14px; font-weight: 400; font-family: inherit;
       /* 1.3 (not 1) so Fira Code's tall glyph box isn't vertically clipped in
          Chromium/Edge — mirrors the .list-item fix. The title is flex-centred
          in a fixed-height (29px) header, so this adds headroom without reflow. */
@@ -1353,7 +1353,7 @@ body.bg-pattern-sparkles {
       position: sticky;
       top: 0;
       z-index: 3;
-      font-size: 11px;
+      font-size: 14px;
     }
     .session-bulk-bar.hidden { display: none; }
     #session-select-all-dot {
@@ -1466,7 +1466,7 @@ body.bg-pattern-sparkles {
     .item-drag-handle {
       cursor: grab;
       opacity: 0.4;
-      font-size: 10px;
+      font-size: 14px;
       padding: 0 4px;
       user-select: none;
       letter-spacing: -2px;
@@ -1630,7 +1630,7 @@ body.bg-pattern-sparkles {
       border-radius: 4px;
       border: none;
       line-height: 1.3;
-      font-size: 13px;
+      font-size: 14px;
       background: transparent;
       transition: background 0.08s;
       cursor: pointer;
@@ -1714,7 +1714,7 @@ body.bg-pattern-sparkles {
     }
     .list-item span {
       color: var(--fg);
-      font-size: 9.75px;
+      font-size: 14px;
     }
     .grow {
       flex: 1;
@@ -1908,7 +1908,7 @@ body.bg-pattern-sparkles {
       transition: all 0.15s;
       margin-top: 16px;
       font-family: inherit;
-      font-size: 11px;
+      font-size: 14px;
     }
     .incognito-btn:hover {
       opacity: 0.6;
@@ -1923,7 +1923,7 @@ body.bg-pattern-sparkles {
     .incognito-btn.active .eye-open { display: none; }
     .incognito-btn.active .eye-blinded { display: inline !important; }
     .incognito-label {
-      font-size: 11px;
+      font-size: 14px;
       font-weight: 500;
       letter-spacing: 0.3px;
     }
@@ -2114,7 +2114,7 @@ body.bg-pattern-sparkles {
       cursor: pointer;
       color: var(--red);
       font-weight: bold;
-      font-size: 11px;
+      font-size: 14px;
     }
     .rag-source-item {
       margin-top: 8px;
@@ -2125,12 +2125,12 @@ body.bg-pattern-sparkles {
     }
     .rag-similarity {
       color: color-mix(in srgb, var(--fg) 50%, transparent);
-      font-size: 10px;
+      font-size: 14px;
       margin-left: 6px;
     }
     .rag-snippet {
       color: color-mix(in srgb, var(--fg) 65%, transparent);
-      font-size: 11px;
+      font-size: 14px;
       margin-top: 4px;
       white-space: pre-wrap;
       max-height: 60px;
@@ -2142,13 +2142,13 @@ body.bg-pattern-sparkles {
       border-radius: 4px;
       color: color-mix(in srgb, var(--fg) 50%, transparent);
       cursor: pointer;
-      font-size: 10px;
+      font-size: 14px;
       padding: 1px 5px;
     }
     .rag-file-delete:hover { color: var(--fg); border-color: var(--fg); }
     .rag-file-size {
       color: color-mix(in srgb, var(--fg) 50%, transparent);
-      font-size: 10px;
+      font-size: 14px;
       margin-left: 4px;
     }
     .rag-upload-zone {
@@ -2157,7 +2157,7 @@ body.bg-pattern-sparkles {
       padding: 12px;
       text-align: center;
       color: color-mix(in srgb, var(--fg) 45%, transparent);
-      font-size: 11px;
+      font-size: 14px;
       cursor: pointer;
       transition: border-color 0.2s;
     }
@@ -2166,7 +2166,7 @@ body.bg-pattern-sparkles {
       color: var(--red);
     }
     .msg .timestamp {
-      font-size: 10px;
+      font-size: 14px;
       color: color-mix(in srgb, var(--fg) 45%, transparent);
       margin-top: 4px;
       text-align: right;
@@ -2193,7 +2193,7 @@ body.bg-pattern-sparkles {
       min-height: 20px;
       min-width: 80px;
     }
-    
+
     /* Ensure code block headers are only slightly larger than regular text */
     pre h1, pre h2, pre h3, pre h4, pre h5, pre h6 {
       font-size: 1.1em;
@@ -2592,7 +2592,7 @@ body.bg-pattern-sparkles {
       max-width: 0;
       overflow: hidden;
       white-space: nowrap;
-      font-size: 11px;
+      font-size: 14px;
       font-weight: 500;
       letter-spacing: 0.3px;
       opacity: 0;
@@ -2657,7 +2657,7 @@ body.bg-pattern-sparkles {
       color: color-mix(in srgb, var(--fg) 40%, transparent);
       cursor: pointer;
       padding: 0 10px;
-      font-size: 11px;
+      font-size: 14px;
       font-weight: 500;
       font-family: inherit;
       transition: color 0.2s;
@@ -2715,7 +2715,7 @@ body.bg-pattern-sparkles {
       gap: 4px;
       height: 21px;
       padding: 0 6px;
-      font-size: 11px;
+      font-size: 14px;
       font-weight: 500;
       font-family: inherit;
       background: none;
@@ -2923,7 +2923,7 @@ body.bg-pattern-sparkles {
       cursor: pointer;
       color: color-mix(in srgb, var(--fg) 22%, transparent);
       font-family: inherit;
-      font-size: 13px;
+      font-size: 14px;
       line-height: 1;
       transition: color 0.15s ease, opacity 0.15s ease, transform 0.12s ease;
       -webkit-tap-highlight-color: transparent;
@@ -3091,7 +3091,7 @@ body.bg-pattern-sparkles {
       opacity: 0.7;
       cursor: pointer;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 14px;
       font-family: inherit;
       transition: background 0.15s, opacity 0.15s, color 0.15s;
       /* Domino-style cascade: each item slides up + fades in with a tiny
@@ -3173,11 +3173,11 @@ body.bg-pattern-sparkles {
     .attach-strip:empty {
       display: none;
     }
-    .attach-strip { 
-      display: flex; 
-      gap: 6px; 
-      flex-wrap: wrap; 
-      margin: 6px 0 0; 
+    .attach-strip {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 6px 0 0;
       min-height: 32px;
       padding: 2px;
     }
@@ -3795,7 +3795,7 @@ body.bg-pattern-sparkles {
     pre.pre-compact .run-code {
       height: 20px;
       padding: 0;
-      font-size: 10px;
+      font-size: 14px;
       font-weight: 500;
       line-height: 20px;
       top: 3px;
@@ -3877,7 +3877,7 @@ body.bg-pattern-sparkles {
       z-index: 2;
       background: var(--panel); color: var(--fg);
       border: 1px solid var(--border); border-radius: 6px;
-      padding: 3px 10px; font-size: 11px; cursor: pointer;
+      padding: 3px 10px; font-size: 14px; cursor: pointer;
       display: inline-flex; align-items: center;
       transition: border-color 0.15s, color 0.15s, background 0.15s;
     }
@@ -4000,11 +4000,11 @@ body.bg-pattern-sparkles {
       display:flex; align-items:center; gap:6px; border:1px solid var(--border); padding:4px; margin:4px 0; border-radius: 4px;
     }
     .models-row .grow,
-    .models-row select { 
-      flex:1; 
-      display:flex; 
-      align-items:center; 
-      font-size: 9.75px;
+    .models-row select {
+      flex:1;
+      display:flex;
+      align-items:center;
+      font-size: 14px;
     }
     .model-fav-btn {
       width: 8px; height: 8px;
@@ -4191,7 +4191,7 @@ body.bg-pattern-sparkles {
       /* Incognito — smaller on mobile */
       .incognito-btn {
         padding: 4px 10px;
-        font-size: 10px;
+        font-size: 14px;
       }
       /* Incognito indicator — right side next to hamburger on mobile */
       .incognito-indicator {
@@ -4810,7 +4810,7 @@ body.bg-pattern-sparkles {
          mobile too — those have no mobile enlargement, so neither should
          these (otherwise the doc footer reads in a larger/different font). */
       .doclib-card-action-btn {
-        font-size: 10px;
+        font-size: 14px;
         padding: 3px 8px;
       }
       /* Chat top bar — adjusted for reduced height */
@@ -4857,7 +4857,7 @@ body.bg-pattern-sparkles {
       padding: 4px;
       border-left: 2px solid var(--red);
       background: color-mix(in srgb, var(--red) 5%, transparent);
-    } 
+    }
     /* Loading indicator for messages */
     .loading-indicator {
       display: flex;
@@ -5339,7 +5339,7 @@ body.bg-pattern-sparkles {
       opacity: 0.6;
       cursor: not-allowed;
     }
-    
+
 /* ── Drag & Drop ── */
 
 /* ---------- Color palette (dark / light) ---------- */
@@ -5349,28 +5349,28 @@ body.bg-pattern-sparkles {
       background: color-mix(in srgb, var(--red) 10%, transparent) !important;
       border-color: var(--red) !important;
     }
-    
+
     .section[dnd-over="true"] {
       background: color-mix(in srgb, var(--red) 20%, transparent) !important;
       border-color: var(--red) !important;
       transform: scale(1.02);
     }
-    
+
     .drag-handle {
       cursor: grab;
       opacity: 0.5;
       padding: 0 6px;
       user-select: none;
     }
-    
+
     .drag-handle:hover {
       opacity: 0.8;
     }
-    
+
     .drag-handle:active {
       cursor: grabbing;
     }
-    
+
 /* ── UI Controls (Radio, Presets, Toolbar, Settings) ── */
 
 
@@ -5386,12 +5386,12 @@ body.bg-pattern-sparkles {
       cursor: pointer;
       transition: all 0.2s ease;
     }
-    
+
     .radio-option:hover {
       background: color-mix(in srgb, var(--fg) 9%, transparent);
       border-color: var(--fg);
     }
-    
+
     .radio-option input[type="radio"] {
       appearance: none;
       -webkit-appearance: none;
@@ -5406,22 +5406,22 @@ body.bg-pattern-sparkles {
       position: relative;
       flex-shrink: 0;
     }
-    
+
     .radio-option input[type="radio"]:checked {
       border-color: var(--red);
       background: var(--red);
     }
-    
+
     .radio-option input[type="radio"]:focus {
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--red) 30%, transparent);
     }
-    
+
     .radio-label {
       color: var(--fg);
       font-size: 14px;
       user-select: none;
     }
-    
+
     /* Preset buttons */
     .preset-btn {
       height: 27.2px; /* 15% smaller than 32px */
@@ -5436,29 +5436,29 @@ body.bg-pattern-sparkles {
       cursor: pointer;
       transition: all 0.2s ease;
     }
-    
+
     .preset-btn:hover {
       background: var(--panel);
       border-color: var(--fg);
     }
-    
+
     .preset-btn.active {
       background: var(--panel);
       border-color: var(--fg);
       box-shadow: 0 0 0 1px var(--fg), 0 0 8px color-mix(in srgb, var(--fg) 16%, transparent);
       font-weight: 600;
     }
-    
+
     /* All preset buttons use the same blue color */
     .preset-btn {
       border-color: var(--red); /* Blue color */
     }
-    
+
     .preset-btn.active {
       border-color: var(--red); /* Blue color when active */
       box-shadow: 0 0 0 1px var(--red), 0 0 8px color-mix(in srgb, var(--red) 30%, transparent);
     }
-    
+
     /* Custom preset modal: the base .preset-modal-content sets overflow:hidden
        (for desktop rounded-corner clipping), which on the mobile sheet clipped
        the footer (Start/Cancel) off the bottom with no way to reach it. Let the
@@ -5469,7 +5469,7 @@ body.bg-pattern-sparkles {
       overflow-y: auto !important;
     }
     #custom-preset-modal .modal-body label {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 500;
       color: var(--fg);
       margin-top: 8px;
@@ -5490,7 +5490,7 @@ body.bg-pattern-sparkles {
       border-radius: 6px;
       color: var(--fg);
       padding: 8px 10px;
-      font-size: 13px;
+      font-size: 14px;
       font-family: inherit;
       transition: border-color 0.15s;
     }
@@ -5575,7 +5575,7 @@ body.bg-pattern-sparkles {
       color: color-mix(in srgb, var(--fg) 40%, transparent);
     }
     .vis-icon-text {
-      font-size: 10px;
+      font-size: 14px;
       font-weight: 700;
       font-family: inherit;
       letter-spacing: -0.5px;
@@ -5638,7 +5638,7 @@ body.bg-pattern-sparkles {
       min-height: 0;
     }
     .vis-hint {
-      font-size: 10px;
+      font-size: 14px;
       color: color-mix(in srgb, var(--fg) 30%, transparent);
       font-weight: 400;
       margin-left: 2px;
@@ -5922,7 +5922,7 @@ body.bg-pattern-sparkles {
     .dropdown-item-compact {
       cursor: pointer;
       padding: 6px 8px;
-      font-size: 11px;
+      font-size: 14px;
       border-radius: 8px;
       display: flex;
       align-items: center;
@@ -6004,7 +6004,7 @@ body.bg-pattern-sparkles {
       background: var(--border);
       margin: 4px 8px;
     }
-    
+
     /* Search toggle styles */
     .search-toggle {
       display: flex;
@@ -6014,7 +6014,7 @@ body.bg-pattern-sparkles {
       border-bottom: 1px solid var(--border);
       margin-bottom: 8px;
     }
-    
+
     .search-provider-label {
       font-size: 14px;
       color: var(--fg);
@@ -6029,24 +6029,24 @@ body.bg-pattern-sparkles {
       border-radius: 4px;
       transition: all 0.2s ease;
     }
-    
+
     #mic-btn:hover {
       background: color-mix(in srgb, var(--fg) 6%, transparent);
       border-color: var(--fg);
     }
-    
+
     #mic-btn.recording {
       background: var(--color-recording);
       border-color: var(--color-recording);
       animation: pulse 1.5s infinite;
     }
-    
+
     @keyframes pulse {
       0% { opacity: 1; }
       50% { opacity: 0.7; }
       100% { opacity: 1; }
     }
-    
+
     #recording-indicator {
       position: fixed;
       top: 10px;
@@ -6064,29 +6064,29 @@ body.bg-pattern-sparkles {
       justify-content: space-between;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
-    
+
     #recording-indicator.hidden {
       display: none !important;
     }
-    
+
     .recording-content {
       display: flex;
       align-items: center;
       gap: 12px;
       color: white;
     }
-    
+
     .recording-icon {
       color: var(--color-recording);
       font-size: 20px;
       animation: pulse 1.5s infinite;
     }
-    
+
     .recording-text {
       font-size: 16px;
       font-weight: 500;
     }
-    
+
     #stop-recording {
       background: var(--color-recording);
       color: white;
@@ -6098,32 +6098,32 @@ body.bg-pattern-sparkles {
       cursor: pointer;
       transition: background 0.2s ease;
     }
-    
+
     #stop-recording:hover {
       background: var(--color-recording-hover);
     }
-    
+
     /* Error state for recording */
     #recording-indicator.error {
       background: rgba(173, 26, 26, 0.9);
     }
-    
+
     .recording-error {
       color: var(--color-recording);
       font-size: 14px;
       margin-top: 4px;
     }
-    
+
     @media (max-width: 768px) {
       #recording-indicator {
         margin: 8px;
         padding: 10px;
       }
-      
+
       .recording-text {
         font-size: 14px;
       }
-      
+
       #stop-recording {
         padding: 6px 10px;
         font-size: 12px;
@@ -6182,7 +6182,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       display: none;
     }
     .search-group-header {
-      font-size: 10px;
+      font-size: 14px;
       font-weight: 600;
       color: var(--color-subheader);
       text-transform: uppercase;
@@ -6203,7 +6203,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       background: color-mix(in srgb, var(--red) 10%, transparent);
     }
     .search-result-role {
-      font-size: 10px;
+      font-size: 14px;
       font-weight: 600;
       color: var(--color-subheader);
       flex-shrink: 0;
@@ -6218,7 +6218,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       white-space: nowrap;
     }
     .search-result-time {
-      font-size: 10px;
+      font-size: 14px;
       color: color-mix(in srgb, var(--fg) 35%, transparent);
       flex-shrink: 0;
       white-space: nowrap;
@@ -6244,12 +6244,12 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       text-align: center;
       color: color-mix(in srgb, var(--fg) 35%, transparent);
       padding: 24px;
-      font-size: 13px;
+      font-size: 14px;
     }
 
     /* ---------- Theme popup (uses .modal > .modal-content frame) ---------- */
     #theme-modal { z-index: 260; }
-    #theme-popup .theme-popup-sub { color: color-mix(in srgb, var(--fg) 50%, transparent); font-size: 11px; margin-bottom: 10px; }
+    #theme-popup .theme-popup-sub { color: color-mix(in srgb, var(--fg) 50%, transparent); font-size: 14px; margin-bottom: 10px; }
     /* `max-height` instead of a fixed height so the popup shrinks to fit its
        content (avoids the leftover whitespace after the time-based switching
        card was removed). The inner .theme-tab-panel keeps overflow:auto, so
@@ -6279,10 +6279,10 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       border: 1.5px solid color-mix(in srgb, var(--fg) 12%, transparent);
     }
     .theme-swatch-colors span:first-child { margin-left: 0; }
-    .theme-custom-label { font-size: 11px; font-weight: 600; color: color-mix(in srgb, var(--fg) 50%, transparent); text-transform: uppercase; letter-spacing: 0.06em; margin: 10px 0 6px; }
+    .theme-custom-label { font-size: 14px; font-weight: 600; color: color-mix(in srgb, var(--fg) 50%, transparent); text-transform: uppercase; letter-spacing: 0.06em; margin: 10px 0 6px; }
     .theme-custom { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
     .color-row { display: flex; align-items: center; gap: 4px; }
-    .color-row label { font-size: 13px; font-weight: 500; color: var(--fg); opacity: 0.7; flex: 1; }
+    .color-row label { font-size: 14px; font-weight: 500; color: var(--fg); opacity: 0.7; flex: 1; }
     .color-row input[type="color"],
     .color-row input.cp-swatch-input {
       width: 24px; height: 24px; border: 1px solid var(--border); border-radius: 50%;
@@ -6311,7 +6311,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
     .color-reset-btn.changed { opacity: 0.4; pointer-events: auto; }
     .color-reset-btn.changed:hover { opacity: 1; color: var(--red); }
     .theme-custom-divider {
-      grid-column: 1 / -1; font-size: 11px; color: var(--fg); opacity: 0.5;
+      grid-column: 1 / -1; font-size: 14px; color: var(--fg); opacity: 0.5;
       text-transform: uppercase; letter-spacing: 0.04em; margin: 6px 0 2px;
       border-top: 1px solid var(--border); padding-top: 6px;
     }
@@ -6366,7 +6366,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
     }
     .theme-save-row button:hover { background: color-mix(in srgb, var(--red) 11%, transparent); }
     .theme-save-error {
-      font-size: 11px; color: var(--red); margin-top: 2px; display: none;
+      font-size: 14px; color: var(--red); margin-top: 2px; display: none;
     }
     /* Import/Export */
     .theme-io-row { display: flex; gap: 6px; margin-top: 6px; }
@@ -6449,14 +6449,14 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
     .theme-adv-toggle {
       margin-top: 10px; margin-bottom: 10px;
       padding: 6px 8px; cursor: pointer;
-      font-size: 11px; color: var(--red); opacity: 0.8;
+      font-size: 14px; color: var(--red); opacity: 0.8;
       border: 1px solid var(--border); border-radius: 6px;
       transition: opacity 0.15s, background 0.15s;
       user-select: none;
     }
     .theme-adv-toggle:hover { opacity: 1; background: color-mix(in srgb, var(--fg) 4%, transparent); }
     .theme-adv-toggle .theme-adv-arrow {
-      display: inline-block; transition: transform 0.2s; font-size: 10px;
+      display: inline-block; transition: transform 0.2s; font-size: 14px;
       margin-right: 4px;
     }
     .theme-adv-toggle.open .theme-adv-arrow { transform: rotate(90deg); }
@@ -6464,7 +6464,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
     .theme-adv-section.hidden { display: none; }
     .theme-adv-group { margin-bottom: 8px; }
     .theme-adv-group-label {
-      font-size: 10px; color: var(--fg); opacity: 0.5;
+      font-size: 14px; color: var(--fg); opacity: 0.5;
       text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px;
     }
     .theme-adv-clear-btn {
@@ -6756,7 +6756,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
     /* -- Extracted inline-style classes -- */
     .cmp-header-action-btn {
       background: none; border: 1px solid var(--border); color: var(--fg);
-      cursor: pointer; padding: 3px 10px; font-size: 11px; font-weight: 600;
+      cursor: pointer; padding: 3px 10px; font-size: 14px; font-weight: 600;
       opacity: 0.7; transition: all 0.15s; line-height: 1; border-radius: 4px;
       display: inline-flex; align-items: center; font-family: inherit;
     }
@@ -6815,7 +6815,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       border: 1px solid var(--border);
       border-radius: 6px;
       color: var(--fg);
-      font-size: 11px; font-weight: 500;
+      font-size: 14px; font-weight: 500;
       font-family: inherit;
       cursor: pointer; opacity: 0.75;
       transition: opacity 0.15s, border-color 0.15s;
@@ -6844,7 +6844,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       text-align: left;
       padding: 5px 8px;
       background: none; border: none;
-      color: var(--fg); font-size: 11px;
+      color: var(--fg); font-size: 14px;
       font-family: inherit;
       border-radius: 4px;
       cursor: pointer;
@@ -6854,13 +6854,13 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
     }
     .cmp-eval-empty {
       padding: 10px; text-align: center;
-      font-size: 11px; opacity: 0.5;
+      font-size: 14px; opacity: 0.5;
     }
     /* Tick on items that ship a known expected answer */
     .cmp-eval-item-tick {
       float: right;
       margin-left: 6px;
-      font-size: 10px;
+      font-size: 14px;
       color: var(--color-success, #4caf50);
       opacity: 0.8;
     }
@@ -6874,7 +6874,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       right: 0;
       display: inline-flex; align-items: center; gap: 8px;
       padding: 8px 12px;
-      font-size: 11px;
+      font-size: 14px;
       background: var(--panel);
       border: 1px solid color-mix(in srgb, var(--color-success, #4caf50) 50%, transparent);
       border-radius: 8px;
@@ -6894,7 +6894,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
     }
     .cmp-eval-expected-value {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 11px;
+      font-size: 14px;
     }
     .cmp-eval-expected-close {
       background: none; border: none; color: var(--fg);
@@ -6935,7 +6935,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       overflow: hidden;
     }
     .compare-probe-title {
-      font-size: 13px; font-weight: 600; opacity: 0.7;
+      font-size: 14px; font-weight: 600; opacity: 0.7;
     }
     .compare-probe-list {
       display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 320px; width: 100%;
@@ -6949,18 +6949,18 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       background: color-mix(in srgb, var(--color-error, #f44) 8%, transparent);
     }
     .compare-probe-spinner {
-      width: 24px; text-align: center; font-size: 10px; flex-shrink: 0;
+      width: 24px; text-align: center; font-size: 14px; flex-shrink: 0;
       letter-spacing: -1px; opacity: 0.6;
     }
     .compare-probe-spinner.ok { color: var(--color-success); animation: none; }
     .compare-probe-spinner.fail { color: var(--color-error, #f44); animation: none; }
     .compare-probe-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .compare-probe-status { font-size: 11px; opacity: 0.5; flex-shrink: 0; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .compare-probe-status { font-size: 14px; opacity: 0.5; flex-shrink: 0; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .compare-probe-status.ok { color: var(--color-success); opacity: 1; }
     .compare-probe-status.fail { color: var(--color-error, #f44); opacity: 1; }
     .compare-probe-action-btn {
       padding: 2px 8px; background: transparent; color: var(--fg); border: 1px solid var(--border);
-      border-radius: 4px; cursor: pointer; font-size: 10px; font-family: inherit;
+      border-radius: 4px; cursor: pointer; font-size: 14px; font-family: inherit;
       opacity: 0.7; transition: opacity 0.15s, border-color 0.15s; white-space: nowrap; flex-shrink: 0;
     }
     .compare-probe-action-btn:hover { opacity: 1; border-color: var(--accent); }
@@ -7102,7 +7102,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
     /* Pane title as clickable model-swap button */
     .pane-title-btn {
       background: none; border: none; cursor: pointer;
-      font-size: 10px; font-weight: 400; font-family: inherit;
+      font-size: 14px; font-weight: 400; font-family: inherit;
       color: var(--fg); padding: 0;
       text-align: left; display: flex; align-items: center; gap: 4px;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -7137,7 +7137,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
     .pane-model-item:hover { background: color-mix(in srgb, var(--fg) 10%, transparent); }
     .pane-model-item.current { color: var(--red); font-weight: 600; }
     .pane-timer {
-      font-size: 10px; font-weight: 400; opacity: 0.45; font-variant-numeric: tabular-nums;
+      font-size: 14px; font-weight: 400; opacity: 0.45; font-variant-numeric: tabular-nums;
       white-space: nowrap; padding-right: 4px;
     }
     /* When 4+ panes, timer wraps to its own row */
@@ -7205,7 +7205,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
     /* Contextual one-liner under the mode toggles describing what you just
        changed — empty until the first toggle, then a subtle hint. */
     .compare-mode-hint {
-      font-size: 11px;
+      font-size: 14px;
       opacity: 0.55;
       margin-top: 6px;
       min-height: 0;
@@ -7394,11 +7394,11 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
         min-height: 44px;
         padding: 8px 14px !important;
         gap: 8px !important;
-        font-size: 13px;
+        font-size: 14px;
       }
       #group-mode-btn .compare-toggle-label {
         display: inline !important;
-        font-size: 13px;
+        font-size: 14px;
         margin-top: 0;
       }
       #group-mode-btn svg { width: 18px; height: 18px; }
@@ -7416,7 +7416,7 @@ pre { background: var(--code-bg, var(--hl-bg, #282c34)) !important; }
       .compare-header-bar button { padding: 3px 5px !important; }
       .compare-header-bar #compare-check-btn > span,
       .compare-header-bar #compare-add-btn > span {
-        font-size: 10px; margin-left: 2px;
+        font-size: 14px; margin-left: 2px;
       }
       /* Compare mobile: keep the close X visible — it's the only way out
          now that the hamburger is hidden during compare mode. */
@@ -8012,7 +8012,7 @@ button.hamburger {
 }
 
 .control-label {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg);
   opacity: 0.8;
 }
@@ -8081,7 +8081,7 @@ button.hamburger {
   min-height: 34px;
   max-height: 120px;
   resize: none;
-  font-size: 13px !important;
+  font-size: 14px !important;
   overflow-y: auto !important;
   line-height: 1.4 !important;
   font-family: inherit !important;
@@ -8278,7 +8278,7 @@ button.hamburger {
 .thumb button {
   height: 24px;
   padding: 0 7px;
-  font-size: 13px;
+  font-size: 14px;
   border-radius: 4px;
   color: var(--accent-primary, var(--red));
 }
@@ -8298,7 +8298,7 @@ button.hamburger {
 }
 .thumb-collapsed-label { white-space: nowrap; }
 .thumb-collapsed-x {
-  height: 24px; padding: 0 7px; font-size: 13px; border-radius: 4px;
+  height: 24px; padding: 0 7px; font-size: 14px; border-radius: 4px;
   color: var(--accent-primary, var(--red));
   background: none; border: none; cursor: pointer; opacity: 0.6;
 }
@@ -8910,7 +8910,7 @@ body.hide-thinking .thinking-section { display: none !important; }
    long-running command always reads as alive, not frozen. */
 .agent-thread-elapsed {
   margin: 0 6px 0 4px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--accent, var(--red));
@@ -8930,7 +8930,7 @@ body.hide-thinking .thinking-section { display: none !important; }
 }
 .stall-banner-txt { flex: 1; opacity: 0.85; }
 .stall-banner-btn {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 6px;
@@ -9127,11 +9127,11 @@ body.hide-thinking .thinking-section { display: none !important; }
     margin: 8px;
     padding: 10px;
   }
-  
+
   .recording-text {
     font-size: 14px;
   }
-  
+
   .stop-recording-btn {
     padding: 6px 10px;
     font-size: 12px;
@@ -9527,7 +9527,7 @@ details a:hover {
   border-bottom: 2px solid transparent;
   color: var(--color-muted);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
@@ -9557,7 +9557,7 @@ details a:hover {
 }
 
 .preset-templates-hint {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-muted);
   margin: 0 0 8px;
 }
@@ -9597,7 +9597,7 @@ details a:hover {
 }
 
 .prompt-template-preview {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-muted);
   line-height: 1.4;
   white-space: nowrap;
@@ -9614,7 +9614,7 @@ details a:hover {
 }
 
 .preset-slider-row label {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--fg);
   font-weight: 500;
   margin: 0;
@@ -9679,7 +9679,7 @@ details a:hover {
 
 .preset-temp-hints {
   display: flex;
-  font-size: 10px;
+  font-size: 14px;
   color: var(--color-muted);
   margin-top: -4px;
   margin-bottom: 10px;
@@ -9721,7 +9721,7 @@ details a:hover {
   height: 15px;
   border-radius: 50%;
   border: 1px solid var(--border);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-muted);
   cursor: help;
@@ -9735,7 +9735,7 @@ details a:hover {
 }
 
 .preset-section-header {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-muted);
   text-transform: uppercase;
@@ -9751,7 +9751,7 @@ details a:hover {
   background: none;
   border: none;
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   padding: 0 2px;
   line-height: 1;
@@ -9795,7 +9795,7 @@ details a:hover {
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: 14px;
   padding: 2px 8px;
   cursor: pointer;
   transition: all 0.15s;
@@ -9825,7 +9825,7 @@ details a:hover {
   flex: 1;
   padding: 8px 12px !important;
   margin: 0 !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 600;
   background: none;
   border: none;
@@ -9853,7 +9853,7 @@ details a:hover {
 }
 .memory-char-chip {
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -9900,7 +9900,7 @@ details a:hover {
   border-radius: 6px;
   color: var(--fg);
   padding: 6px 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-family: inherit;
   cursor: pointer;
 }
@@ -9913,7 +9913,7 @@ details a:hover {
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: 14px;
   padding: 4px 8px;
   cursor: pointer;
   transition: all 0.15s;
@@ -9941,7 +9941,7 @@ details a:hover {
   align-items: center;
   gap: 6px;
   margin-top: 12px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--fg);
 }
 .preset-sub-option {
@@ -10161,7 +10161,7 @@ details a:hover {
 }
 .memory-desc {
   margin: 0;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.5;
   /* 65% keeps this description text above WCAG AA 4.5:1 (50% was ~3.9:1). */
   color: color-mix(in srgb, var(--fg) 65%, transparent);
@@ -10253,7 +10253,7 @@ textarea.memory-add-input {
   background: none;
   border: 1px solid var(--border);
   color: color-mix(in srgb, var(--fg) 60%, transparent);
-  font-size: 11px;
+  font-size: 14px;
   height: 24px;
   padding: 0 8px;
   border-radius: 6px;
@@ -10298,7 +10298,7 @@ textarea.memory-add-input {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: 14px;
   height: 24px;
   color: color-mix(in srgb, var(--fg) 60%, transparent);
   cursor: pointer;
@@ -10329,7 +10329,7 @@ textarea.memory-add-input {
   border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--red) 5%, transparent);
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .memory-bulk-bar.hidden {
@@ -10441,7 +10441,7 @@ textarea.memory-add-input {
   gap: 5px;
   cursor: pointer;
   color: color-mix(in srgb, var(--fg) 60%, transparent);
-  font-size: 10px;
+  font-size: 14px;
   padding: 4px 8px;
   border-radius: 4px;
   user-select: none;
@@ -10454,7 +10454,7 @@ textarea.memory-add-input {
 
 #memory-selected-count {
   color: color-mix(in srgb, var(--fg) 50%, transparent);
-  font-size: 10px;
+  font-size: 14px;
   flex: 1;
 }
 
@@ -10494,7 +10494,7 @@ textarea.memory-add-input {
 }
 
 .memory-count {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-muted);
 }
 
@@ -10507,7 +10507,7 @@ textarea.memory-add-input {
   background: var(--bg);
   color: var(--fg);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -10713,7 +10713,7 @@ textarea.memory-add-input {
 }
 
 .memory-item-text {
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.5;
   word-break: break-word;
   color: var(--fg);
@@ -10727,7 +10727,7 @@ textarea.memory-add-input {
   background: var(--bg);
   color: var(--fg);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   min-width: 0;
 }
 
@@ -10850,7 +10850,7 @@ textarea.memory-add-input {
   background: none;
   border: 1px solid transparent;
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: 14px;
   height: 22px;
   padding: 0 6px;
   border-radius: 6px;
@@ -10889,7 +10889,7 @@ textarea.memory-add-input {
 .doclib-research-sources ol {
   margin: 0;
   padding-left: 18px;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.5;
 }
 .doclib-research-sources a {
@@ -10898,7 +10898,7 @@ textarea.memory-add-input {
 }
 .doclib-research-sources a:hover { text-decoration: underline; }
 .doclib-research-summary {
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.5;
 }
 .doclib-research-summary p { margin: 4px 0; }
@@ -10970,7 +10970,7 @@ textarea.memory-add-input {
   background: none;
   border: 1px solid var(--border);
   color: color-mix(in srgb, var(--fg) 60%, transparent);
-  font-size: 10px;
+  font-size: 14px;
   height: 22px;
   padding: 0 8px;
   display: inline-flex;
@@ -11002,7 +11002,7 @@ textarea.memory-add-input {
   border: 1px solid var(--border);
   border-radius: 6px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   height: 24px;
   padding: 0 6px;
   cursor: pointer;
@@ -11023,7 +11023,7 @@ textarea.memory-add-input {
 
 /* Category badge on each item */
 .memory-cat-badge {
-  font-size: 10px;
+  font-size: 14px;
   padding: 2px 6px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--fg) 8%, transparent);
@@ -11082,7 +11082,7 @@ textarea.memory-add-input {
   padding: 24px 16px;
   color: color-mix(in srgb, var(--fg) 35%, transparent);
   text-align: center;
-  font-size: 11px;
+  font-size: 14px;
   font-style: italic;
 }
 
@@ -11111,7 +11111,7 @@ textarea.memory-add-input {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 11px;
+  font-size: 14px;
   color: color-mix(in srgb, var(--fg) 70%, transparent);
   padding-bottom: 4px;
   border-bottom: 1px solid var(--border);
@@ -11480,7 +11480,7 @@ textarea.memory-add-input {
   gap: 6px;
   padding: 0 10px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg);
   opacity: 0.4;
   cursor: pointer;
@@ -11519,7 +11519,7 @@ textarea.memory-add-input {
   border-radius: 2px;
   color: var(--fg);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   padding: 0 4px;
   height: 18px;
   width: 120px;
@@ -11556,7 +11556,7 @@ textarea.memory-add-input {
   color: var(--fg);
   opacity: 0.25;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   padding: 0 10px;
   transition: opacity 0.1s;
@@ -11575,7 +11575,7 @@ textarea.memory-add-input {
   opacity: 0.3;
   cursor: pointer;
   padding: 0 2px;
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1;
   transition: opacity 0.1s, color 0.1s;
   flex-shrink: 0;
@@ -11676,7 +11676,7 @@ textarea.memory-add-input {
   color: var(--red);
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
   cursor: pointer;
@@ -11694,7 +11694,7 @@ textarea.memory-add-input {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--accent);
   opacity: 0.9;
   white-space: nowrap;
@@ -11723,7 +11723,7 @@ textarea.memory-add-input {
 .doc-actions-footer #doc-language-select {
   height: 28px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 14px;
   top: 0;
 }
 /* Lang-type icon shown to the LEFT of the language select. Browsers won't
@@ -11765,7 +11765,7 @@ textarea.memory-add-input {
   height: 28px; padding: 0 8px 0 10px;
   background: var(--bg); color: var(--fg);
   border: 1px solid var(--border); border-radius: 6px;
-  font-size: 11px; cursor: pointer;
+  font-size: 14px; cursor: pointer;
   transition: border-color 0.12s, background 0.12s;
 }
 .doc-langpicker-trigger:hover {
@@ -11819,7 +11819,7 @@ textarea.memory-add-input {
   position: relative;
   top: 0;
   font-family: inherit;
-  font-size: 10px;
+  font-size: 14px;
   padding: 2px 20px 2px 8px;
   height: 22px;
   /* Fixed width so the right-anchored chevron doesn't shift when the selected
@@ -11844,7 +11844,7 @@ textarea.memory-add-input {
   color: var(--fg);
   border: none;
   font-family: inherit;
-  font-size: 10px;
+  font-size: 14px;
   padding: 2px 8px;
   height: 22px;
   cursor: pointer;
@@ -11920,7 +11920,7 @@ textarea.memory-add-input {
   border: none;
   color: var(--fg);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.1s;
@@ -11983,11 +11983,11 @@ textarea.memory-add-input {
   .email-send-btn { height: 28px; }
   /* The type/language picker was the slim one stuck at 22px — match it to the
      rest of the row. */
-  .doc-language-select { height: 28px; font-size: 13px; padding: 2px 22px 2px 10px; }
-  .doc-overflow-item { font-size: 13px; padding: 9px 14px; }
+  .doc-language-select { height: 28px; font-size: 14px; padding: 2px 22px 2px 10px; }
+  .doc-overflow-item { font-size: 14px; padding: 9px 14px; }
   .doc-overflow-item .overflow-icon svg,
   .doc-overflow-item svg { width: 16px; height: 16px; }
-  .email-more-menu .dropdown-item-compact { padding: 9px 12px; font-size: 13px; }
+  .email-more-menu .dropdown-item-compact { padding: 9px 12px; font-size: 14px; }
 
   /* The doc footer is tight once the run/preview toggle joins it, so on mobile
      go icon-only for Close, Undo & Copy (their icons are clear).
@@ -12043,7 +12043,7 @@ textarea.memory-add-input {
   opacity: 0.35;
   padding: 4px 7px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
   line-height: 1.3;
@@ -12098,7 +12098,7 @@ textarea.memory-add-input {
   width: 22px;
   flex-shrink: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.7;
 }
 .md-toolbar-sep {
@@ -12229,7 +12229,7 @@ textarea.memory-add-input {
   padding: 4px 8px;
   border-radius: 4px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
   line-height: 1.3;
@@ -12264,7 +12264,7 @@ textarea.memory-add-input {
 }
 .doc-find-input:focus { border-color: var(--accent); }
 .doc-find-count {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.6;
   white-space: nowrap;
   min-width: 50px;
@@ -12327,7 +12327,7 @@ textarea.memory-add-input {
   padding: 10px 8px 10px 0;
   margin: 0;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.45;
   text-align: right;
   color: var(--fg);
@@ -12451,7 +12451,7 @@ mark.doc-find-mark.current {
 /* Document font size options */
 .doc-font-m .doc-editor-textarea,
 .doc-font-m .doc-editor-highlight,
-.doc-font-m .doc-line-numbers { font-size: 13px !important; }
+.doc-font-m .doc-line-numbers { font-size: 14px !important; }
 .doc-font-l .doc-editor-textarea,
 .doc-font-l .doc-editor-highlight,
 .doc-font-l .doc-line-numbers { font-size: 15px !important; }
@@ -12561,7 +12561,7 @@ mark.doc-find-mark.current {
 
 /* ---- Selection indicator badge ---- */
 .doc-selection-badge {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--red);
   background: color-mix(in srgb, var(--red) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
@@ -12578,7 +12578,7 @@ mark.doc-find-mark.current {
   color: var(--fg);
   opacity: 0.5;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1;
   padding: 0 2px;
 }
@@ -12630,7 +12630,7 @@ mark.doc-find-mark.current {
 }
 .attach-card-size {
   opacity: 0.45;
-  font-size: 11px;
+  font-size: 14px;
   white-space: nowrap;
 }
 /* Import prompt banner (above chatbar) */
@@ -12757,7 +12757,7 @@ mark.doc-find-mark.current {
 }
 .doc-suggestion-close:hover { opacity: 1; background: color-mix(in srgb, var(--fg) 8%, transparent); }
 .doc-suggestion-counter {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.4;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -12786,19 +12786,19 @@ mark.doc-find-mark.current {
   padding: 5px 12px;
   background: color-mix(in srgb, var(--fg) 4%, var(--bg));
   border-bottom: 1px solid var(--border);
-  font-size: 11px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 .diff-toolbar-status {
   opacity: 0.5;
-  font-size: 10px;
+  font-size: 14px;
   margin-right: auto;
 }
 .diff-toolbar-btn {
   background: none;
   border: 1px solid var(--border);
   color: var(--fg);
-  font-size: 10px;
+  font-size: 14px;
   padding: 3px 10px;
   border-radius: 4px;
   cursor: pointer;
@@ -12891,7 +12891,7 @@ mark.doc-find-mark.current {
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 14px;
   font-family: inherit;
   background: transparent;
   border: 1px solid var(--accent);
@@ -12904,7 +12904,7 @@ mark.doc-find-mark.current {
 .doc-suggestion-reason {
   opacity: 0.6;
   margin-bottom: 6px;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.4;
 }
 .doc-suggestion-diff {
@@ -12912,7 +12912,7 @@ mark.doc-find-mark.current {
   border-radius: 4px;
   padding: 6px 8px;
   font-family: var(--code-font, monospace);
-  font-size: 11px;
+  font-size: 14px;
   margin-bottom: 8px;
   max-height: 100px;
   overflow-y: auto;
@@ -12937,7 +12937,7 @@ mark.doc-find-mark.current {
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   font-weight: 500;
   transition: background 0.1s;
@@ -13139,7 +13139,7 @@ mark.doc-find-mark.current {
   color: var(--fg);
 }
 .doc-version-source {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--fg);
   opacity: 0.5;
   background: color-mix(in srgb, var(--fg) 6%, transparent);
@@ -13147,13 +13147,13 @@ mark.doc-find-mark.current {
   border-radius: 4px;
 }
 .doc-version-time {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--fg);
   opacity: 0.4;
   margin-left: auto;
 }
 .doc-version-summary {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg);
   opacity: 0.5;
   margin-bottom: 4px;
@@ -13163,7 +13163,7 @@ mark.doc-find-mark.current {
   background: none;
   border: 1px solid var(--border);
   color: var(--fg);
-  font-size: 10px;
+  font-size: 14px;
   padding: 2px 8px;
   border-radius: 4px;
   cursor: pointer;
@@ -13175,7 +13175,7 @@ mark.doc-find-mark.current {
 }
 /* "latest" badge */
 .doc-version-latest {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--accent, var(--red));
   background: color-mix(in srgb, var(--accent, var(--red)) 14%, transparent);
@@ -13184,7 +13184,7 @@ mark.doc-find-mark.current {
 }
 /* Diff preview lines — small and muted so they don't dominate the item. */
 .doc-version-diff {
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.5;
   opacity: 0.8;
   margin-top: 2px;
@@ -13266,7 +13266,7 @@ body:has(.compare-active) .hamburger-btn { display: none !important; }
   }
   .doc-tab {
     padding: 0 12px;
-    font-size: 13px;
+    font-size: 14px;
   }
   /* Bigger × touch target on mobile. */
   .doc-tab-close {
@@ -13286,7 +13286,7 @@ body:has(.compare-active) .hamburger-btn { display: none !important; }
      footer is dropped and the per-tab × stays (matching desktop). */
   .doc-mobile-footer { display: none !important; }
   .doc-tab-new {
-    font-size: 13px !important;
+    font-size: 14px !important;
     padding: 0 14px !important;
     gap: 4px;
   }
@@ -13324,7 +13324,7 @@ body:has(.compare-active) .hamburger-btn { display: none !important; }
      the 18px mask fade. Margin isn't overridden by those !important paddings. */
   .doc-md-toolbar .md-view-toggle { margin-left: 8px; }
   .doc-md-toolbar button {
-    font-size: 13px !important;
+    font-size: 14px !important;
     padding: 6px 10px !important;
     min-width: 34px;
     min-height: 34px;
@@ -13376,7 +13376,7 @@ body:has(.compare-active) .hamburger-btn { display: none !important; }
   background: color-mix(in srgb, var(--accent, var(--red)) 14%, transparent);
   color: var(--accent, var(--red));
 }
-.theme-opacity-label { font-size: 10px; font-weight: 600; letter-spacing: 0.02em; }
+.theme-opacity-label { font-size: 14px; font-weight: 600; letter-spacing: 0.02em; }
 .theme-opacity-wrap > svg { flex-shrink: 0; opacity: 0.7; }
 .theme-opacity-wrap input[type="range"] {
   width: 92px;
@@ -13447,7 +13447,7 @@ body:has(.compare-active) .hamburger-btn { display: none !important; }
   border: 1px solid color-mix(in srgb, var(--color-success, #4caf50) 40%, transparent);
   border-radius: 12px;
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
   opacity: 0;
   transform: translateY(4px);
@@ -13576,14 +13576,14 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   align-items: center;
 }
 .admin-toggle-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 .admin-toggle-sub {
   /* 65% mix keeps this helper text above WCAG AA 4.5:1 on the dark panel
      (50% only reached ~3.9:1). */
   color: color-mix(in srgb, var(--fg) 65%, transparent);
-  font-size: 11px;
+  font-size: 14px;
   margin-top: 2px;
 }
 /* Hide the native up/down spinners on the Max auto-skills number input. */
@@ -13653,7 +13653,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   align-items: center;
   gap: 8px;
 }
-.admin-user-name { font-size: 13px; font-weight: 500; }
+.admin-user-name { font-size: 14px; font-weight: 500; }
 /* Privilege panel */
 .admin-priv-panel {
   max-height: 600px;
@@ -13674,7 +13674,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
 }
 /* Section headers */
 .admin-priv-section {
-  font-size: 10px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   opacity: 0.35;
@@ -13706,7 +13706,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   align-items: center;
   gap: 6px;
   padding: 3px 2px;
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   border-radius: 3px;
   transition: background 0.1s;
@@ -13722,7 +13722,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
 /* All/None links */
 .priv-models-all,
 .priv-models-none {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.5;
   color: var(--fg);
   text-decoration: none;
@@ -13758,14 +13758,14 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   margin-bottom: 6px;
 }
 .mcp-tools-panel .mcp-tools-header span:first-child {
-  font-size: 10px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   opacity: 0.35;
   font-weight: 600;
 }
 .mcp-tools-panel .mcp-tools-header a {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.5;
   color: var(--fg);
   text-decoration: none;
@@ -13795,7 +13795,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   align-items: center;
   gap: 8px;
   padding: 4px 6px;
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   border-radius: 3px;
   min-width: 0;
@@ -13889,7 +13889,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
 .adm-ep-section-head {
   display: flex;
   align-items: center;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -13947,7 +13947,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 4px 8px;
-  font-size: 11px;
+  font-size: 14px;
   background: color-mix(in srgb, var(--fg) 3%, transparent);
 }
 .adm-quickstart-toggle:hover {
@@ -14048,10 +14048,10 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   padding: 3px 4px 3px 6px;
   background: color-mix(in srgb, var(--fg) 6%, transparent);
   border: 1px solid var(--border); border-radius: 10px;
-  font-size: 11px; cursor: grab; user-select: none;
+  font-size: 14px; cursor: grab; user-select: none;
 }
 .search-fb-chip.dragging { opacity: 0.4; }
-.search-fb-grip { opacity: 0.35; font-size: 10px; line-height: 1; cursor: grab; }
+.search-fb-grip { opacity: 0.35; font-size: 14px; line-height: 1; cursor: grab; }
 .search-fb-logo {
   width: 12px; height: 12px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -14068,7 +14068,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
 .search-fb-add {
   background: var(--bg); color: var(--fg);
   border: 1px dashed var(--border); border-radius: 10px;
-  padding: 2px 6px; font-family: inherit; font-size: 11px;
+  padding: 2px 6px; font-family: inherit; font-size: 14px;
   outline: none; cursor: pointer;
 }
 .search-fb-add:focus,
@@ -14082,7 +14082,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   box-sizing: border-box;
   margin-bottom: 6px;
   padding: 5px 8px;
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   background: color-mix(in srgb, var(--fg) 4%, transparent);
   border: 1px solid var(--border);
@@ -14094,14 +14094,14 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
 }
 .mcp-tools-count {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   opacity: 0.7;
 }
 
 /* Badges */
 .admin-badge {
-  font-size: 10px;
+  font-size: 14px;
   padding: 2px 6px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--red) 20%, transparent);
@@ -14121,7 +14121,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   padding: 4px 10px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   transition: all 0.15s;
 }
@@ -14138,7 +14138,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   color: #fff;
   cursor: pointer;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   transition: all 0.15s;
 }
@@ -14156,7 +14156,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   background: var(--panel);
   color: var(--fg);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 14px;
 }
 .admin-btn-sm:hover {
   background: var(--border);
@@ -14202,7 +14202,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 14px;
   color: color-mix(in srgb, var(--fg) 60%, transparent);
   cursor: default;
 }
@@ -14251,7 +14251,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
 .adm-ep-inline-msg {
   min-height: 16px;
   margin-top: 5px;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 /* Endpoint items */
@@ -14269,7 +14269,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
 .admin-ep-name { color: var(--fg); font-weight: 500; }
 .admin-ep-detail {
   color: color-mix(in srgb, var(--fg) 40%, transparent);
-  font-size: 10px;
+  font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -14281,8 +14281,8 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
 }
 
 /* Status messages */
-.admin-error { color: var(--color-error); font-size: 11px; margin-top: 4px; }
-.admin-success { color: var(--color-success); font-size: 11px; margin-top: 4px; }
+.admin-error { color: var(--color-error); font-size: 14px; margin-top: 4px; }
+.admin-success { color: var(--color-success); font-size: 14px; margin-top: 4px; }
 .admin-empty {
   color: color-mix(in srgb, var(--fg) 40%, transparent);
   font-size: 12px;
@@ -14316,7 +14316,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
 }
 .admin-rag-upload-zone p {
   color: color-mix(in srgb, var(--fg) 50%, transparent);
-  font-size: 11px;
+  font-size: 14px;
   margin-top: 4px;
 }
 .admin-rag-icon { font-size: 18px; }
@@ -14351,7 +14351,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   margin-bottom: 6px;
 }
 .admin-rag-section-label {
-  font-size: 10px;
+  font-size: 14px;
   color: color-mix(in srgb, var(--fg) 50%, transparent);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -14376,13 +14376,13 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
 }
 .admin-rag-item-meta {
   color: color-mix(in srgb, var(--fg) 40%, transparent);
-  font-size: 10px;
+  font-size: 14px;
   margin: 0 6px;
   flex-shrink: 0;
 }
-.admin-rag-item .admin-btn-delete { font-size: 10px; padding: 2px 6px; }
+.admin-rag-item .admin-btn-delete { font-size: 14px; padding: 2px 6px; }
 .admin-rag-status {
-  font-size: 11px;
+  font-size: 14px;
   color: color-mix(in srgb, var(--fg) 50%, transparent);
   margin-top: 6px;
 }
@@ -14432,7 +14432,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
    read way bigger than the email subject in the regular (inline) reader. Pin
    it smaller so the two views are consistent. */
 .email-reader-tab-modal .modal-header h4 {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 /* Match the sticky modal-header to the doclib modal-content body color
@@ -14442,7 +14442,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
   background: var(--bg);
 }
 .doclib-stats {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg-muted);
   margin-bottom: 8px;
 }
@@ -14488,7 +14488,7 @@ body:has(.doc-version-panel:not(.hidden)) .hamburger-btn {
 .doclib-chip {
   padding: 2px 10px;
   border-radius: 12px;
-  font-size: 10px;
+  font-size: 14px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--fg-muted);
@@ -15020,7 +15020,7 @@ body.right-dock-active:not(.email-doc-split-active) .doc-editor-pane {
   height: 22px;
   display: inline-flex;
   align-items: center;
-  font-size: 10px;
+  font-size: 14px;
   padding: 0 8px;
 }
 /* Library tab panels — Chats / Archive / Research / Documents share the
@@ -15031,7 +15031,7 @@ body.right-dock-active:not(.email-doc-split-active) .doc-editor-pane {
 #doclib-panel-research .memory-sort-select,
 [data-doclib-panel="documents"] .memory-sort-select {
   height: 24px;
-  font-size: 11px;
+  font-size: 14px;
   width: 86px;
 }
 #doclib-panel-chats .memory-toolbar-btn,
@@ -15039,7 +15039,7 @@ body.right-dock-active:not(.email-doc-split-active) .doc-editor-pane {
 #doclib-panel-research .memory-toolbar-btn,
 [data-doclib-panel="documents"] .memory-toolbar-btn {
   height: 24px;
-  font-size: 11px;
+  font-size: 14px;
   position: relative;
   top: -3px;
 }
@@ -15055,7 +15055,7 @@ body.right-dock-active:not(.email-doc-split-active) .doc-editor-pane {
   height: 30px !important;
   min-height: 30px !important;
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 14px;
 }
 /* Unified search bar across Library tabs + Memory modal — same height,
    same magnifying-glass icon at the start, consistent padding. */
@@ -15067,7 +15067,7 @@ body.right-dock-active:not(.email-doc-split-active) .doc-editor-pane {
 #tasks-modal .memory-search-input {
   height: 30px;
   min-height: 30px;
-  font-size: 11px;
+  font-size: 14px;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e06c75' stroke-opacity='0.85' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
   background-repeat: no-repeat;
   background-position: 9px center;
@@ -15425,7 +15425,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   }
   #email-lib-modal .email-attachment-chip {
     padding: 1px 6px !important;
-    font-size: 10px !important;
+    font-size: 14px !important;
     max-width: 130px !important;
     line-height: 18px !important;
   }
@@ -15539,7 +15539,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   }
 }
 .doclib-card-title {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -15661,7 +15661,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   justify-content: center;
   gap: 4px;
   box-sizing: border-box;
-  font-size: 10px;
+  font-size: 14px;
   padding: 3px 8px;
   border-radius: 4px;
   background: none;
@@ -15695,7 +15695,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   border-color: #ff4d4d;
 }
 .doclib-card-expanded-actions > .doclib-card-action-btn {
-  font-size: 10px;
+  font-size: 14px;
   padding: 3px 8px;
 }
 /* Push the Open/Clone group to the right edge of the action bar — Delete
@@ -15784,14 +15784,14 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   }
 }
 .doclib-chat-preview {
-  font-size: 11px;
+  font-size: 14px;
   padding: 0 4px 6px;
 }
 .doclib-chat-preview .doclib-chat-open-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: 14px;
   padding: 3px 8px;
   border-radius: 4px;
   color: var(--fg-muted);
@@ -15872,7 +15872,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: 14px;
   padding: 3px 8px;
   border-radius: 4px;
   background: none;
@@ -15966,7 +15966,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   max-width: 85%;
   padding: 6px 10px 8px;
   border-radius: 14px;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.45;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--fg) 4%, transparent);
@@ -15997,7 +15997,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
 .doclib-chat-bubble-body p:first-child { margin-top: 0; }
 .doclib-chat-bubble-body p:last-child { margin-bottom: 0; }
 .doclib-chat-bubble-body pre {
-  font-size: 10px;
+  font-size: 14px;
   margin: 4px 0;
   padding: 6px 8px;
   background: color-mix(in srgb, var(--bg) 60%, transparent);
@@ -16005,7 +16005,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   overflow-x: auto;
 }
 .doclib-chat-bubble-body code {
-  font-size: 10px;
+  font-size: 14px;
   padding: 1px 4px;
   border-radius: 3px;
   background: color-mix(in srgb, var(--fg) 8%, transparent);
@@ -16086,7 +16086,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   cursor: pointer;
   user-select: none;
   padding: 6px 4px 4px;
-  font-size: 10px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   opacity: 0.6;
@@ -16173,7 +16173,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   line-height: 1.3;
 }
 .skill-card-desc {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.55;
   margin-top: 2px;
   white-space: nowrap;
@@ -16318,7 +16318,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
 /* Section labels separating "Your skills" from the read-only "Built-in
    capabilities" list. */
 .skills-section-label {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.5;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -16424,7 +16424,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
 .skills-audit-title { font-size: 12px; font-weight: 600; }
 .skills-audit-bar { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--fg) 12%, transparent); margin: 6px 0; overflow: hidden; }
 .skills-audit-fill { height: 100%; background: var(--accent, var(--red)); transition: width 0.3s ease; }
-.skills-audit-summary { font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
+.skills-audit-summary { font-size: 14px; opacity: 0.7; margin-bottom: 4px; }
 .skills-audit-log {
   max-height: 22vh; overflow-y: auto;
   font-family: ui-monospace, 'SF Mono', 'Fira Code', monospace;
@@ -16457,15 +16457,15 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
 .skill-test-err   { color: var(--color-danger, #e06c75); }
 .skill-eval-head  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .skill-eval-badge {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.03em;
+  font-size: 14px; font-weight: 700; letter-spacing: 0.03em;
   padding: 2px 8px; border-radius: 10px; flex-shrink: 0;
 }
 .skill-eval-ok   { background: color-mix(in srgb, var(--color-success, #4ade80) 26%, transparent); color: var(--color-success, #4ade80); }
 .skill-eval-warn { background: color-mix(in srgb, var(--color-warning, #f0ad4e) 26%, transparent); color: var(--color-warning, #f0ad4e); }
 .skill-eval-bad  { background: color-mix(in srgb, var(--color-danger, #e06c75) 26%, transparent); color: var(--color-danger, #e06c75); }
 .skill-eval-unknown { background: color-mix(in srgb, var(--fg) 14%, transparent); }
-.skill-eval-summary { font-size: 11px; opacity: 0.85; }
-.skill-eval-issues { margin: 6px 0 0; padding-left: 18px; font-size: 11px; opacity: 0.8; }
+.skill-eval-summary { font-size: 14px; opacity: 0.85; }
+.skill-eval-issues { margin: 6px 0 0; padding-left: 18px; font-size: 14px; opacity: 0.8; }
 .skill-eval-issues li { margin: 2px 0; }
 .skill-eval-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
 .skill-eval-approve.suggested {
@@ -16540,7 +16540,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--fg-muted);
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
   flex-shrink: 0;
@@ -16572,7 +16572,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   background: none;
   border: 1px solid var(--border);
   color: var(--fg-muted);
-  font-size: 11px;
+  font-size: 14px;
   padding: 5px 10px;
   border-radius: 6px;
   cursor: pointer;
@@ -16612,7 +16612,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
   border-radius: 6px;
   background: color-mix(in srgb, var(--red) 5%, transparent);
-  font-size: 10px;
+  font-size: 14px;
   margin-bottom: 8px;
 }
 .doclib-bulk-bar.hidden {
@@ -16624,11 +16624,11 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   gap: 3px;
   cursor: pointer;
   color: color-mix(in srgb, var(--fg) 60%, transparent);
-  font-size: 10px;
+  font-size: 14px;
 }
 #doclib-selected-count {
   color: color-mix(in srgb, var(--fg) 50%, transparent);
-  font-size: 10px;
+  font-size: 14px;
 }
 #doclib-bulk-bar .memory-toolbar-btn {
   position: relative;
@@ -16825,7 +16825,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   font-size: 1rem;
 }
 .gallery-stats {
-  font-size: 10px;
+  font-size: 14px;
   color: color-mix(in srgb, var(--fg) 50%, transparent);
   margin-bottom: 4px;
 }
@@ -16860,7 +16860,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--accent, var(--red));
   pointer-events: none;
@@ -16882,7 +16882,7 @@ body:not(.email-doc-split-active) #email-lib-modal.email-lib-fullscreen:not(.mod
   border-radius: 6px;
   color: var(--fg);
   font: inherit;
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
 }
 .gallery-tag-chips {
@@ -17027,9 +17027,9 @@ body.gallery-selecting .gallery-dl-btn,
 .gallery-ai-chip {
   background: color-mix(in srgb, var(--accent, var(--red)) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent, var(--red)) 25%, transparent);
-  border-radius: 10px; padding: 3px 8px; font-size: 10px;
+  border-radius: 10px; padding: 3px 8px; font-size: 14px;
   color: var(--fg); opacity: 0.8;
-  font: inherit; font-size: 10px;
+  font: inherit; font-size: 14px;
   cursor: pointer;
   transition: background 0.12s, opacity 0.12s, border-color 0.12s;
 }
@@ -17160,13 +17160,13 @@ body.gallery-selecting .gallery-dl-btn,
   white-space: nowrap;
 }
 .attach-vision-model {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--accent, var(--red));
   opacity: 0.85;
   margin-top: 3px;
 }
 .attach-image-name {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.5;
   margin-top: 1px;
 }
@@ -17178,7 +17178,7 @@ body.gallery-selecting .gallery-dl-btn,
   border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;
   padding: 0 8px 0 6px; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; gap: 5px;
-  font-size: 11px; font-weight: 500; line-height: 1;
+  font-size: 14px; font-weight: 500; line-height: 1;
   opacity: 0.75; transition: opacity 0.15s;
 }
 .attach-ocr-btn:hover { opacity: 1; }
@@ -17212,10 +17212,10 @@ body.gallery-selecting .gallery-dl-btn,
   box-shadow: 0 14px 40px rgba(0,0,0,0.4);
 }
 .vision-editor-title {
-  font-size: 13px; font-weight: 600; color: var(--fg);
+  font-size: 14px; font-weight: 600; color: var(--fg);
   display: flex; align-items: center; gap: 6px;
 }
-.vision-editor-desc { font-size: 11px; opacity: 0.6; line-height: 1.4; }
+.vision-editor-desc { font-size: 14px; opacity: 0.6; line-height: 1.4; }
 .vision-editor-text {
   width: 100%; min-height: 180px;
   background: var(--panel); color: var(--fg);
@@ -17317,7 +17317,7 @@ body.gallery-selecting .gallery-dl-btn,
 .gallery-select-btn {
   padding: 9px 10px 11px; background: transparent; color: var(--fg);
   border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
-  font-size: 11px; font-family: inherit; opacity: 0.6; transition: all 0.15s;
+  font-size: 14px; font-family: inherit; opacity: 0.6; transition: all 0.15s;
   margin-top: -4px !important;
 }
 .gallery-select-btn:hover { opacity: 1; }
@@ -17347,19 +17347,19 @@ body.gallery-selecting .gallery-dl-btn,
 .gallery-bulk-bar.hidden { display: none; }
 .gallery-bulk-all {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 11px; opacity: 0.75; cursor: pointer; margin-right: auto;
+  font-size: 14px; opacity: 0.75; cursor: pointer; margin-right: auto;
 }
 .gallery-bulk-all input { accent-color: var(--accent, var(--red)); cursor: pointer; }
 .gallery-bulk-delete {
   padding: 3px 10px; background: transparent; color: var(--red);
   border: 1px solid var(--red); border-radius: 4px; cursor: pointer;
-  font-size: 11px; font-family: inherit;
+  font-size: 14px; font-family: inherit;
 }
 .gallery-bulk-delete:hover { background: var(--red); color: #fff; }
 .gallery-bulk-cancel {
   padding: 3px 10px; background: transparent; color: var(--fg);
   border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
-  font-size: 11px; font-family: inherit; opacity: 0.6;
+  font-size: 14px; font-family: inherit; opacity: 0.6;
 }
 .gallery-bulk-cancel:hover { opacity: 1; }
 .gallery-card img {
@@ -17378,7 +17378,7 @@ body.gallery-selecting .gallery-dl-btn,
   color: #fff;
 }
 .gallery-card-prompt {
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -17414,7 +17414,7 @@ body.gallery-selecting .gallery-dl-btn,
   color: var(--fg);
   cursor: pointer;
   font: inherit;
-  font-size: 11px;
+  font-size: 14px;
   transition: border-color 0.15s, color 0.15s;
 }
 .gallery-load-more:hover {
@@ -17472,7 +17472,7 @@ body.gallery-selecting .gallery-dl-btn,
   color: var(--fg);
   cursor: pointer;
   font: inherit;
-  font-size: 11px;
+  font-size: 14px;
   padding: 3px 8px;
   border-radius: 4px;
   transition: border-color 0.15s;
@@ -17524,7 +17524,7 @@ body.gallery-selecting .gallery-dl-btn,
   /* Tighter than the global default — the photo-detail menu has 8
      items so every pixel of vertical padding adds up. */
   padding: 4px 8px;
-  font-size: 11px;
+  font-size: 14px;
   gap: 8px;
   line-height: 1.2;
 }
@@ -17682,12 +17682,12 @@ body.gallery-selecting .gallery-dl-btn,
 .gallery-date-rel {
   opacity: 0.55;
   margin-left: 4px;
-  font-size: 11px;
+  font-size: 14px;
   font-style: italic;
 }
 .gallery-detail-section label {
   display: block;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   opacity: 0.6;
   margin-bottom: 3px;
@@ -17711,7 +17711,7 @@ body.gallery-selecting .gallery-dl-btn,
   border: 1px solid var(--border);
   border-radius: 4px;
   font: inherit;
-  font-size: 11px;
+  font-size: 14px;
   margin-bottom: 4px;
 }
 .gallery-tag-input:focus,
@@ -17730,12 +17730,12 @@ body.gallery-selecting .gallery-dl-btn,
   transform: translateY(-50%);
   margin-top: -2px;  /* the input has 4px bottom margin; center on the box */
   color: var(--accent, var(--red));
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1;
   pointer-events: none;
   opacity: 0.8;
 }
-.gallery-detail-name-input { font-size: 13px; font-weight: 500; }
+.gallery-detail-name-input { font-size: 14px; font-weight: 500; }
 /* ↵ enter hint on the image name field — accent, shown while editing to signal
    that Enter saves. */
 .gallery-name-wrap { position: relative; }
@@ -17758,7 +17758,7 @@ body.gallery-selecting .gallery-dl-btn,
   color: var(--fg);
   cursor: pointer;
   font: inherit;
-  font-size: 10px;
+  font-size: 14px;
   padding: 3px 10px;
   border-radius: 4px;
   transition: border-color 0.15s, color 0.15s;
@@ -17796,7 +17796,7 @@ body.gallery-selecting .gallery-dl-btn,
     flex: 0 0 auto;
     /* Cap each dropdown so search keeps a usable amount of width. */
     max-width: 100px;
-    font-size: 11px;
+    font-size: 14px;
     padding: 4px 6px;
     /* Nudge down 2px to baseline with the search input (which carries a
        2px down-shift via its wrapper). */
@@ -17805,7 +17805,7 @@ body.gallery-selecting .gallery-dl-btn,
   }
   .gallery-select-btn {
     padding: 6px 8px 8px;
-    font-size: 10px;
+    font-size: 14px;
     flex-shrink: 0;
     /* Push Select to the far right of the single-row toolbar, regardless
        of its DOM position (sits between search and the dropdowns). */
@@ -17955,7 +17955,7 @@ body.gallery-selecting .gallery-dl-btn,
 }
 .cookbook-serve-preset:hover { background: color-mix(in srgb, var(--fg) 8%, transparent); }
 .cookbook-serve-preset-name {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
   flex: 1;
   overflow: hidden;
@@ -17973,7 +17973,7 @@ body.gallery-selecting .gallery-dl-btn,
   border: none;
   color: #50fa7b;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.6;
   padding: 0 2px;
   position: relative;
@@ -17985,7 +17985,7 @@ body.gallery-selecting .gallery-dl-btn,
   border: none;
   color: var(--fg-muted);
   cursor: pointer;
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.3;
   padding: 0 2px;
   position: relative;
@@ -18063,9 +18063,9 @@ body.gallery-selecting .gallery-dl-btn,
   justify-content: space-between;
 }
 .cookbook-card-header-actions { display: flex; gap: 4px; }
-.cookbook-card-title { font-size: 13px; font-weight: 600; }
+.cookbook-card-title { font-size: 14px; font-weight: 600; }
 .cookbook-card-desc {
-  font-size: 11px;
+  font-size: 14px;
   color: color-mix(in srgb, var(--fg) 50%, transparent);
 }
 
@@ -18079,7 +18079,7 @@ body.gallery-selecting .gallery-dl-btn,
 .cookbook-field-label {
   display: flex;
   flex-direction: column;
-  font-size: 11px;
+  font-size: 14px;
   color: color-mix(in srgb, var(--fg) 60%, transparent);
   gap: 3px;
 }
@@ -18116,7 +18116,7 @@ body.gallery-selecting .gallery-dl-btn,
   border: 1px solid var(--border);
   border-radius: 6px;
   font-family: 'Fira Code', monospace;
-  font-size: 11px;
+  font-size: 14px;
   white-space: pre-wrap;
   word-break: break-all;
   color: var(--fg);
@@ -18128,7 +18128,7 @@ body.gallery-selecting .gallery-dl-btn,
   padding: 4px 10px;
   min-width: 54px;
   text-align: center;
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -18194,7 +18194,7 @@ body.gallery-selecting .gallery-dl-btn,
   border: 1px solid var(--border);
   border-radius: 6px;
   font-family: 'Fira Code', monospace;
-  font-size: 11px;
+  font-size: 14px;
   white-space: pre-wrap;
   word-break: break-all;
   max-height: 180px;
@@ -18224,7 +18224,7 @@ body.gallery-selecting .gallery-dl-btn,
   background: color-mix(in srgb, var(--fg) 6%, transparent);
 }
 .hwfit-cached-header {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.4;
   font-weight: 600;
   text-transform: uppercase;
@@ -18242,14 +18242,14 @@ body.gallery-selecting .gallery-dl-btn,
 .hwfit-cached-repo {
   flex: 1;
   color: var(--fg-muted);
-  font-size: 11px;
+  font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .hwfit-cached-size,
 .hwfit-cached-files {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--fg-muted);
   white-space: nowrap;
 }
@@ -18259,7 +18259,7 @@ body.gallery-selecting .gallery-dl-btn,
 }
 .hwfit-cached-delete {
   opacity: 0.4;
-  font-size: 10px;
+  font-size: 14px;
 }
 .hwfit-cached-delete:hover {
   opacity: 1;
@@ -18361,7 +18361,7 @@ body.gallery-selecting .gallery-dl-btn,
   }
 }
 .cookbook-clear-btn {
-  font-size: 10px !important;
+  font-size: 14px !important;
   padding: 0 8px !important;
   height: 22px !important;
   border-radius: 6px !important;
@@ -18384,7 +18384,7 @@ body.gallery-selecting .gallery-dl-btn,
   background: color-mix(in srgb, var(--red) 6%, transparent);
   border: 1px solid color-mix(in srgb, var(--red) 20%, transparent);
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 14px;
 }
 .cookbook-bulk-bar.hidden { display: none; }
 .serve-select-cb {
@@ -18424,7 +18424,7 @@ body.gallery-selecting .gallery-dl-btn,
   align-items: center;
 }
 .cookbook-serve-dir-pill {
-  font-size: 10px;
+  font-size: 14px;
   font-family: 'Fira Code', monospace;
   padding: 2px 8px;
   border-radius: 4px;
@@ -18512,7 +18512,7 @@ body.gallery-selecting .gallery-dl-btn,
 }
 .cookbook-gpu-btn {
   width: 22px; height: 22px;
-  font-size: 10px;
+  font-size: 14px;
   font-family: 'Fira Code', monospace;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -18582,7 +18582,7 @@ body.gallery-selecting .gallery-dl-btn,
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   font-family: 'Fira Code', monospace;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg);
 }
 .cookbook-gpu-popup-head {
@@ -18597,7 +18597,7 @@ body.gallery-selecting .gallery-dl-btn,
   flex: 1;
   font-weight: 400;
   color: var(--fg-muted);
-  font-size: 10px;
+  font-size: 14px;
 }
 .cookbook-gpu-popup-close {
   background: none;
@@ -18661,7 +18661,7 @@ body.gallery-selecting .gallery-dl-btn,
   padding: 2px 8px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 10px;
+  font-size: 14px;
 }
 .cookbook-gpu-kill[data-sig="KILL"] {
   background: color-mix(in srgb, var(--red) 12%, transparent);
@@ -18733,7 +18733,7 @@ body.gallery-selecting .gallery-dl-btn,
   top: -3px;
 }
 .cookbook-stop-all-btn {
-  font-size: 10px !important;
+  font-size: 14px !important;
   padding: 0 8px !important;
   height: 22px !important;
   border-radius: 6px !important;
@@ -18757,7 +18757,7 @@ body.gallery-selecting .gallery-dl-btn,
   padding: 0;
 }
 .cookbook-saved-toggle-header {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg-muted);
   text-transform: uppercase;
@@ -18768,7 +18768,7 @@ body.gallery-selecting .gallery-dl-btn,
 .cookbook-saved-item {
   margin: 2px 0;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 14px;
 }
 .cookbook-saved-header {
   display: flex;
@@ -18785,7 +18785,7 @@ body.gallery-selecting .gallery-dl-btn,
   margin: 4px 0 4px 6px;
 }
 .cookbook-saved-host {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--fg-muted);
   font-family: 'Fira Code', monospace;
 }
@@ -18796,7 +18796,7 @@ body.gallery-selecting .gallery-dl-btn,
   white-space: nowrap;
 }
 .cookbook-saved-launch {
-  font-size: 10px;
+  font-size: 14px;
   padding: 2px 8px;
 }
 .cookbook-saved-del {
@@ -18805,7 +18805,7 @@ body.gallery-selecting .gallery-dl-btn,
   color: var(--fg-muted);
   opacity: 0.3;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 14px;
   padding: 0 2px;
 }
 .cookbook-saved-del:hover {
@@ -18841,7 +18841,7 @@ body.gallery-selecting .gallery-dl-btn,
 .cookbook-slot-btn {
   min-width: 22px; height: 22px;
   padding: 0 6px;
-  font-size: 10px; font-weight: 600;
+  font-size: 14px; font-weight: 600;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: none;
@@ -18959,12 +18959,12 @@ body.gallery-selecting .gallery-dl-btn,
   margin: 12px 2px 4px;
 }
 .cookbook-dep-section-title {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.03em;
 }
 .cookbook-dep-section-note {
-  font-size: 10px;
+  font-size: 14px;
   color: color-mix(in srgb, var(--fg) 50%, transparent);
 }
 .cookbook-dep-tag {
@@ -19095,7 +19095,7 @@ body.gallery-selecting .gallery-dl-btn,
   margin-bottom: 6px;
 }
 .hwfit-serve-row label {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--fg-muted);
   white-space: nowrap;
   letter-spacing: 0.3px;
@@ -19228,7 +19228,7 @@ body.gallery-selecting .gallery-dl-btn,
   flex-direction: row;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg-muted);
   cursor: pointer;
   padding: 3px 0;
@@ -19239,7 +19239,7 @@ body.gallery-selecting .gallery-dl-btn,
 .hwfit-spec-group .hwfit-spec-tokens {
   height: 20px;
   padding: 0 4px;
-  font-size: 11px;
+  font-size: 14px;
   /* Match the generic .hwfit-sf serve controls: inherit font + 4px radius
      so the Speculative method/token widgets read as the same control
      family as the rest of the panel (they were 'Fira Code'/3px before). */
@@ -19347,7 +19347,7 @@ body.gallery-selecting .gallery-dl-btn,
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 10px;
+  font-size: 14px;
   color: var(--fg-muted);
   letter-spacing: 0.3px;
 }
@@ -19361,7 +19361,7 @@ body.gallery-selecting .gallery-dl-btn,
   border: 1px solid var(--border);
   border-radius: 4px;
   font-family: 'Berkeley Mono', 'SF Mono', 'Fira Code', monospace;
-  font-size: 10px;
+  font-size: 14px;
   white-space: pre-wrap;
   word-break: break-all;
   width: 100%;
@@ -19380,7 +19380,7 @@ body.gallery-selecting .gallery-dl-btn,
 }
 .hwfit-serve-actions .cookbook-btn {
   padding: 5px 14px;
-  font-size: 11px;
+  font-size: 14px;
 }
 .hwfit-serve-actions-spacer { flex: 1 1 auto; }
 .hwfit-serve-launch {
@@ -19562,7 +19562,7 @@ body.gallery-selecting .gallery-dl-btn,
   display: flex; flex-direction: column; gap: 10px;
 }
 .cookbook-edit-title {
-  font-size: 13px; font-weight: 600; color: var(--fg);
+  font-size: 14px; font-weight: 600; color: var(--fg);
 }
 .cookbook-edit-textarea {
   width: 100%;
@@ -19681,7 +19681,7 @@ body.gallery-selecting .gallery-dl-btn,
   white-space: nowrap;
 }
 .cookbook-task-wave {
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: -1px;
   color: #fff;
   /* Gentle pulse on top of the cycling bars so a running task reads as clearly
@@ -19970,19 +19970,19 @@ body.gallery-selecting .gallery-dl-btn,
   }
   .cookbook-tab {
     padding: 6px 10px;
-    font-size: 13px;
+    font-size: 14px;
   }
   /* Mobile cookbook text: matched to the calendar/library modals so
      cookbook doesn't read noticeably larger than the rest of the app.
      Inputs stay at 16px specifically — anything smaller triggers iOS
      Safari's auto-zoom on focus, which yanks the layout. */
   .cookbook-body {
-    font-size: 13px;
+    font-size: 14px;
   }
   .cookbook-body h2 { font-size: 14px; }
   .cookbook-body .memory-desc,
   .cookbook-body .doclib-desc { font-size: 12px; }
-  .cookbook-body .memory-item-title { font-size: 13px; }
+  .cookbook-body .memory-item-title { font-size: 14px; }
   .cookbook-body .memory-item-meta { font-size: 11px !important; }
   .cookbook-body .hwfit-sf,
   .cookbook-body .cookbook-field-input,
@@ -20003,25 +20003,25 @@ body.gallery-selecting .gallery-dl-btn,
   }
   .hwfit-spec-group .hwfit-spec-method { min-width: 0; flex: 1 1 auto; }
   .hwfit-numstep { flex: 0 0 auto; }
-  .cookbook-card-title { font-size: 13px; }
+  .cookbook-card-title { font-size: 14px; }
   .cookbook-card-desc { font-size: 12px; }
   .cookbook-field-label { font-size: 12px; }
   .cookbook-field-input { font-size: 16px; padding: 7px 10px; }
   /* Dropdown pickers (Dependencies / Download tabs) don't need the 16px
      no-zoom-on-focus trick that text inputs do, and 16px reads oversized next
      to the Serve tab's 11px selects. Shrink just the selects to match. */
-  select.cookbook-field-input { font-size: 13px !important; padding: 5px 8px; }
+  select.cookbook-field-input { font-size: 14px !important; padding: 5px 8px; }
   /* Repo input + model search read oversized at 16px; bring their text and
      placeholder hints down to match the rest of the cookbook. */
-  .cookbook-dl-repo, .hwfit-search { font-size: 13px !important; }
+  .cookbook-dl-repo, .hwfit-search { font-size: 14px !important; }
   .cookbook-cmd-preview { font-size: 12px; padding: 8px 10px; }
   .cookbook-btn { font-size: 12px; padding: 6px 12px; }
-  .cookbook-tab { font-size: 13px; }
-  .cookbook-task-header { font-size: 13px; padding: 6px 10px; }
-  .cookbook-task-name { font-size: 13px; }
-  .cookbook-task-sub { font-size: 11px; }
+  .cookbook-tab { font-size: 14px; }
+  .cookbook-task-header { font-size: 14px; padding: 6px 10px; }
+  .cookbook-task-name { font-size: 14px; }
+  .cookbook-task-sub { font-size: 14px; }
   .cookbook-task-status {
-    font-size: 10px;
+    font-size: 14px;
     /* Vertical alignment of the phase/loading badge against the task title. */
     position: relative;
     top: 2px;
@@ -20065,7 +20065,7 @@ body.gallery-selecting .gallery-dl-btn,
   }
   .cookbook-section-title { font-size: 12px; }
   .cookbook-settings-label { font-size: 12px; }
-  .cookbook-settings-hint { font-size: 11px; }
+  .cookbook-settings-hint { font-size: 14px; }
   .cookbook-settings-input { font-size: 16px; }
   /* Settings stack is flex:1 + overflow:hidden with no inner scroll, so on a
      short mobile viewport its lower half gets clipped. Let it scroll. */
@@ -20083,15 +20083,15 @@ body.gallery-selecting .gallery-dl-btn,
   .cookbook-serve-preset-meta { font-size: 12px; }
   .cookbook-saved-name { font-size: 14px; }
   .cookbook-saved-host { font-size: 12px; }
-  .cookbook-slot-btn { font-size: 13px; }
+  .cookbook-slot-btn { font-size: 14px; }
   /* The serve-panel "Save" split button reads larger than the surrounding
      controls (it's also bold) — knock it down so it matches the row. */
   .cookbook-saved-save,
-  .cookbook-saved-arrow { font-size: 11px; }
+  .cookbook-saved-arrow { font-size: 14px; }
   .cookbook-output-pre { font-size: 12px; }
   .cookbook-dep-tag { font-size: 12px; }
-  .cookbook-checkbox-label { font-size: 13px; }
-  .cookbook-gpu-btn { font-size: 13px; }
+  .cookbook-checkbox-label { font-size: 14px; }
+  .cookbook-gpu-btn { font-size: 14px; }
 }
 
 /* Slider — range + text value */
@@ -20160,7 +20160,7 @@ body.gallery-selecting .gallery-dl-btn,
   width: 64px !important;
   flex-shrink: 0;
   text-align: center;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 /* Toggle switches — match admin-switch */
@@ -20175,7 +20175,7 @@ body.gallery-selecting .gallery-dl-btn,
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 14px;
   color: color-mix(in srgb, var(--fg) 60%, transparent);
   cursor: pointer;
   user-select: none;
@@ -20220,7 +20220,7 @@ body.gallery-selecting .gallery-dl-btn,
   margin-top: 8px;
 }
 .cookbook-gpu-label {
-  font-size: 11px;
+  font-size: 14px;
   color: color-mix(in srgb, var(--fg) 60%, transparent);
   margin-right: 4px;
   white-space: nowrap;
@@ -20229,7 +20229,7 @@ body.gallery-selecting .gallery-dl-btn,
   width: 26px;
   height: 26px;
   padding: 0;
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   font-weight: 600;
   border: 1px solid var(--border);
@@ -20256,7 +20256,7 @@ body.gallery-selecting .gallery-dl-btn,
   background: transparent;
   border: 1px dashed color-mix(in srgb, var(--accent) 50%, transparent);
   color: color-mix(in srgb, var(--fg) 70%, transparent);
-  font-size: 11px;
+  font-size: 14px;
 }
 .cookbook-add-instance-btn:hover,
 .cookbook-save-btn:hover {
@@ -20277,7 +20277,7 @@ body.gallery-selecting .gallery-dl-btn,
 /* Preset chips */
 /* Saved card styling */
 .cookbook-saved-card .cookbook-card-desc {
-  font-size: 11px;
+  font-size: 14px;
   color: color-mix(in srgb, var(--fg) 50%, transparent);
 }
 .cookbook-delete-preset-btn {
@@ -20346,7 +20346,7 @@ body.gallery-selecting .gallery-dl-btn,
   background: transparent;
   color: var(--color-error);
   font: inherit;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   margin-right: auto;
@@ -20359,7 +20359,7 @@ body.gallery-selecting .gallery-dl-btn,
 .cookbook-diag-chevron {
   display: inline-block;
   width: 10px;
-  font-size: 10px;
+  font-size: 14px;
 }
 .cookbook-diag-copy {
   border: 0;
@@ -20393,7 +20393,7 @@ body.gallery-selecting .gallery-dl-btn,
   height: 18px;
   min-height: 18px;
   line-height: 16px;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -20417,7 +20417,7 @@ body.gallery-selecting .gallery-dl-btn,
   user-select: text;
 }
 .cookbook-diag-suggestion {
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.35;
   color: var(--fg-muted);
   margin-bottom: 8px;
@@ -20434,7 +20434,7 @@ body.gallery-selecting .gallery-dl-btn,
   display: inline-flex;
 }
 .cookbook-diag-action-trigger {
-  font-size: 11px;
+  font-size: 14px;
   padding: 4px 10px;
   min-height: 24px;
   background: var(--panel);
@@ -20459,7 +20459,7 @@ body.gallery-selecting .gallery-dl-btn,
   white-space: nowrap;
 }
 .cookbook-diag-btn {
-  font-size: 11px;
+  font-size: 14px;
   padding: 4px 10px;
   background: var(--panel);
   border: 1px solid color-mix(in srgb, var(--color-error) 40%, transparent);
@@ -20535,7 +20535,7 @@ body.gallery-selecting .gallery-dl-btn,
   border-radius: 4px;
   padding: 0 14px;
   height: 28px;
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   cursor: pointer;
   flex-shrink: 0;
@@ -20549,7 +20549,7 @@ body.gallery-selecting .gallery-dl-btn,
 
 /* HF link in search panel */
 .hwfit-panel-hf-link {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--red);
   text-decoration: none;
   margin-left: auto;
@@ -20577,7 +20577,7 @@ body.gallery-selecting .gallery-dl-btn,
   list-style: none;
   padding: 4px 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg-muted);
   transition: background 0.1s, color 0.1s;
 }
@@ -20600,7 +20600,7 @@ body.gallery-selecting .gallery-dl-btn,
   margin-bottom: 8px;
 }
 .cookbook-settings-label {
-  font-size: 10px;
+  font-size: 14px;
   color: var(--fg-muted);
 }
 .cookbook-settings-hint {
@@ -20609,11 +20609,11 @@ body.gallery-selecting .gallery-dl-btn,
 }
 .cookbook-settings-input {
   width: 100%;
-  font-size: 11px;
+  font-size: 14px;
   padding: 4px 6px;
 }
 .cookbook-settings-subtitle {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg-muted);
   text-transform: uppercase;
@@ -20628,7 +20628,7 @@ body.gallery-selecting .gallery-dl-btn,
   border: 1px solid var(--border);
   border-radius: 3px;
   color: var(--fg-muted);
-  font-size: 13px;
+  font-size: 14px;
   width: 16px;
   height: 16px;
   position: relative;
@@ -20700,7 +20700,7 @@ body.gallery-selecting .gallery-dl-btn,
 }
 .cookbook-server-row input.hwfit-sf,
 .cookbook-server-row select.hwfit-sf {
-  font-size: 11px;
+  font-size: 14px;
   padding: 0 6px;
   margin: 0;
   height: 24px;
@@ -20761,7 +20761,7 @@ body.gallery-selecting .gallery-dl-btn,
   height: 24px;
   line-height: 22px;
   padding: 0 8px;
-  font-size: 11px;
+  font-size: 14px;
   box-sizing: border-box;
 }
 .cookbook-server-row .cookbook-srv-actions > .close-btn { width: 24px; padding: 0; line-height: 22px; }
@@ -20770,7 +20770,7 @@ body.gallery-selecting .gallery-dl-btn,
 .cookbook-server-rm {
   width: 22px;
   height: 22px;
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.55;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -20792,7 +20792,7 @@ body.gallery-selecting .gallery-dl-btn,
   width: auto;
   height: auto;
   padding: 2px 8px;
-  font-size: 10px;
+  font-size: 14px;
   font-family: inherit;
   background: none;
   color: var(--red);
@@ -20809,7 +20809,7 @@ body.gallery-selecting .gallery-dl-btn,
 .cookbook-server-save-btn {
   width: auto;
   padding: 2px 8px;
-  font-size: 10px;
+  font-size: 14px;
   font-family: inherit;
   cursor: pointer;
   background: none;
@@ -20823,7 +20823,7 @@ body.gallery-selecting .gallery-dl-btn,
 .cookbook-server-cancel-btn {
   width: auto;
   padding: 2px 8px;
-  font-size: 10px;
+  font-size: 14px;
   font-family: inherit;
   cursor: pointer;
   background: none;
@@ -20885,7 +20885,7 @@ body.gallery-selecting .gallery-dl-btn,
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--fg-muted);
-  font-size: 10px;
+  font-size: 14px;
   padding: 0 5px;
   cursor: pointer;
   min-width: 20px;
@@ -20912,7 +20912,7 @@ body.gallery-selecting .gallery-dl-btn,
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--fg);
-  font-size: 10px;
+  font-size: 14px;
   height: 28px;
   padding: 0 4px;
   cursor: pointer;
@@ -20946,7 +20946,7 @@ body.gallery-selecting .gallery-dl-btn,
 .hwfit-toolbar input {
   height: 28px;
   padding: 0 6px;
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   background: var(--bg);
   color: var(--fg);
@@ -21084,7 +21084,7 @@ body.gallery-selecting .gallery-dl-btn,
   color: var(--fg);
   font-weight: 600;
 }
-.hwfit-server-toggle { flex-shrink: 0; font-size: 10px !important; padding: 3px 8px !important; white-space: nowrap; }
+.hwfit-server-toggle { flex-shrink: 0; font-size: 14px !important; padding: 3px 8px !important; white-space: nowrap; }
 .hwfit-toolbar .hwfit-host { width: 110px; flex-shrink: 0; }
 .hwfit-env-row { gap: 6px; flex-wrap: wrap; }
 .hwfit-env-row .hwfit-envtype { width: auto; min-width: 70px; flex-shrink: 0; }
@@ -21094,7 +21094,7 @@ body.gallery-selecting .gallery-dl-btn,
   display: flex; flex-wrap: wrap; column-gap: 4px; row-gap: 7px; padding: 4px 0;
 }
 .hwfit-hw-chip {
-  font-size: 10px; padding: 0 8px; border-radius: 6px;
+  font-size: 14px; padding: 0 8px; border-radius: 6px;
   background: color-mix(in srgb, var(--fg) 8%, transparent);
   color: var(--fg); opacity: 0.7; white-space: nowrap;
   border: 0;
@@ -21151,7 +21151,7 @@ body.gallery-selecting .gallery-dl-btn,
      was winning over the plain rule and leaving the manual chip's
      button at the browser-default ~13px. Forcing it locally so the
      manual chip's text matches every other chip's text. */
-  font-size: 10px !important;
+  font-size: 14px !important;
   line-height: 1 !important;
   transform: translateY(-3px);
 }
@@ -21162,7 +21162,7 @@ body.gallery-selecting .gallery-dl-btn,
      the regular chips' × inheriting the chip's 10px while the
      manual chip's × landed on the browser default (~13px), making
      manual look bigger. Lock every × at 13px. */
-  font-size: 13px !important;
+  font-size: 14px !important;
   line-height: 1 !important;
   transform: translateY(-5px);
 }
@@ -21215,7 +21215,7 @@ body.gallery-selecting .gallery-dl-btn,
   color: var(--fg);
   border-radius: 4px;
   font: inherit;
-  font-size: 10px;
+  font-size: 14px;
   padding: 0 6px;
   box-sizing: border-box;
 }
@@ -21244,7 +21244,7 @@ body.gallery-selecting .gallery-dl-btn,
 }
 .hwfit-row {
   display: flex; align-items: center; gap: 6px; padding: 5px 8px;
-  border-radius: 6px; cursor: pointer; font-size: 11px;
+  border-radius: 6px; cursor: pointer; font-size: 14px;
   transition: background 0.1s;
 }
 .hwfit-row:hover { background: color-mix(in srgb, var(--fg) 6%, transparent); }
@@ -21271,14 +21271,14 @@ body.gallery-selecting .gallery-dl-btn,
 .hwfit-fit { width: 52px; font-weight: 700; text-transform: uppercase; }
 .hwfit-name {
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
-  font-weight: 500; font-size: 11px; color: var(--fg);
+  font-weight: 500; font-size: 14px; color: var(--fg);
 }
 .hwfit-c-params { width: 42px; }
 .hwfit-c-quant  { width: 52px; }
 .hwfit-c-vram   { width: 42px; }
 .hwfit-c-ctx    { width: 32px; }
 .hwfit-c-speed  { width: 44px; }
-.hwfit-c-score  { width: 40px; font-weight: 700; font-size: 11px; color: var(--fg); }
+.hwfit-c-score  { width: 40px; font-weight: 700; font-size: 14px; color: var(--fg); }
 .hwfit-c-mode   { width: 72px; }
 .hwfit-moe {
   display: inline-block; padding: 0 4px; border-radius: 4px; margin-left: 4px;
@@ -21292,7 +21292,7 @@ body.gallery-selecting .gallery-dl-btn,
 .hwfit-action-panel {
   border: 1px solid var(--border); border-left: 3px solid var(--red);
   border-radius: 0 6px 6px 6px; background: var(--panel);
-  padding: 10px 12px; margin: 2px 0 6px; font-size: 11px;
+  padding: 10px 12px; margin: 2px 0 6px; font-size: 14px;
   display: flex; flex-direction: column; gap: 8px;
   animation: hwfit-panel-in 0.15s ease-out;
 }
@@ -21304,7 +21304,7 @@ body.gallery-selecting .gallery-dl-btn,
   display: flex; align-items: center; gap: 8px; min-width: 0;
 }
 .hwfit-panel-model {
-  font-size: 11px; font-weight: 600; color: var(--fg);
+  font-size: 14px; font-weight: 600; color: var(--fg);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0;
 }
 .hwfit-panel-badge {
@@ -21316,12 +21316,12 @@ body.gallery-selecting .gallery-dl-btn,
   display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
 }
 .hwfit-panel-fields label, .hwfit-adv-grid label {
-  display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--fg-muted); white-space: nowrap;
+  display: flex; align-items: center; gap: 4px; font-size: 14px; color: var(--fg-muted); white-space: nowrap;
 }
 .hwfit-panel-fields input, .hwfit-panel-fields select,
 .hwfit-adv-grid input, .hwfit-adv-grid select {
   background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
-  color: var(--fg); font-size: 11px; padding: 3px 6px; font-family: inherit;
+  color: var(--fg); font-size: 14px; padding: 3px 6px; font-family: inherit;
   outline: none; transition: border-color 0.15s;
 }
 .hwfit-panel-fields input:focus, .hwfit-adv-grid input:focus,
@@ -21336,16 +21336,16 @@ body.gallery-selecting .gallery-dl-btn,
 .hwfit-cb { cursor: pointer; }
 .hwfit-cb input[type="checkbox"] { margin: 0 2px 0 0; }
 .hwfit-panel-advanced, .hwfit-panel-settings {
-  font-size: 10px;
+  font-size: 14px;
 }
 .hwfit-panel-advanced summary, .hwfit-panel-settings summary {
-  cursor: pointer; color: var(--fg-muted); font-size: 10px;
+  cursor: pointer; color: var(--fg-muted); font-size: 14px;
   user-select: none; padding: 2px 0;
 }
 .hwfit-panel-advanced summary:hover, .hwfit-panel-settings summary:hover { color: var(--fg); }
 .hwfit-panel-cmd {
   font-family: 'Berkeley Mono', 'SF Mono', 'Fira Code', monospace;
-  font-size: 10px; padding: 6px 8px; border-radius: 4px;
+  font-size: 14px; padding: 6px 8px; border-radius: 4px;
   background: var(--bg); border: 1px solid var(--border);
   white-space: pre-wrap; word-break: break-all; max-height: 60px; overflow-y: auto;
   color: var(--fg-muted);
@@ -21354,7 +21354,7 @@ body.gallery-selecting .gallery-dl-btn,
   display: flex; gap: 4px; flex-wrap: wrap;
 }
 .hwfit-panel-note {
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.35;
   color: var(--fg-muted);
   background: color-mix(in srgb, var(--yellow, #f1fa8c) 8%, transparent);
@@ -21366,7 +21366,7 @@ body.gallery-selecting .gallery-dl-btn,
 /* ── Saved presets ── */
 .hwfit-preset {
   display: flex; align-items: center; gap: 8px; padding: 6px 10px;
-  border: 1px solid var(--border); border-radius: 6px; font-size: 11px;
+  border: 1px solid var(--border); border-radius: 6px; font-size: 14px;
   transition: border-color 0.15s;
 }
 .hwfit-preset:hover { border-color: var(--red); }
@@ -21497,7 +21497,7 @@ body.gallery-selecting .gallery-dl-btn,
 
 /* Keyboard shortcuts */
 .shortcut-category {
-  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
   opacity: 0.4; padding: 8px 0 4px; margin-top: 4px;
 }
 .shortcut-category:first-child { margin-top: 0; padding-top: 0; }
@@ -21518,7 +21518,7 @@ body.gallery-selecting .gallery-dl-btn,
 /* Inline hint shown while rebinding a shortcut ("press a key" → "↵ Enter
    to save"). Subtle so it doesn't compete with the key caps. */
 .shortcut-hint {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.6;
   color: var(--accent, var(--red));
   white-space: nowrap;
@@ -21533,9 +21533,9 @@ body.gallery-selecting .gallery-dl-btn,
 }
 .shortcut-key:hover { background: color-mix(in srgb, var(--accent, #cc6a3a) 8%, transparent); }
 /* Unbound shortcut — show a dashed "Set" placeholder instead of keycaps. */
-.shortcut-key-unset { font-size: 10px; }
+.shortcut-key-unset { font-size: 14px; }
 .shortcut-unset {
-  font-size: 10px;
+  font-size: 14px;
   padding: 2px 8px;
   border: 1px dashed var(--border);
   border-radius: 4px;
@@ -21543,7 +21543,7 @@ body.gallery-selecting .gallery-dl-btn,
 }
 .shortcut-key-unset:hover .shortcut-unset { border-color: var(--accent, var(--red)); color: var(--fg); }
 .shortcut-key kbd {
-  display: inline-block; font-family: inherit; font-size: 10px;
+  display: inline-block; font-family: inherit; font-size: 14px;
   padding: 2px 6px; min-width: 20px; text-align: center;
   /* Highlight kbd chips in the theme accent so they stand out from
      normal text and clearly mark "this is a key you press". */
@@ -21562,7 +21562,7 @@ body.gallery-selecting .gallery-dl-btn,
 .shortcut-key.listening kbd { border-color: var(--accent, #cc6a3a); }
 .shortcut-action-btn {
   width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--border);
-  background: transparent; color: var(--fg); cursor: pointer; font-size: 13px;
+  background: transparent; color: var(--fg); cursor: pointer; font-size: 14px;
   display: flex; align-items: center; justify-content: center; transition: all 0.15s;
 }
 .shortcut-action-btn:hover { border-color: var(--accent, #cc6a3a); background: color-mix(in srgb, var(--accent, #cc6a3a) 10%, var(--bg)); }
@@ -21605,7 +21605,7 @@ body.gallery-selecting .gallery-dl-btn,
   }
   .settings-nav-item {
     padding: 6px 10px;
-    font-size: 11px;
+    font-size: 14px;
   }
 }
 
@@ -21637,7 +21637,7 @@ body.gallery-selecting .gallery-dl-btn,
   .settings-nav-item {
     flex: 0 0 auto;
     padding: 6px 10px;
-    font-size: 11px;
+    font-size: 14px;
   }
   .settings-panels {
     padding: 12px 14px;
@@ -21847,7 +21847,7 @@ body:not(.welcome-ready) #welcome-screen {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 14px;
   margin-bottom: 0;
 }
 .task-log-row.expanded .task-log-row-head { margin-bottom: 4px; }
@@ -21878,7 +21878,7 @@ body:not(.welcome-ready) #welcome-screen {
   margin-left: -4px;
 }
 .task-log-repeat {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1;
   color: color-mix(in srgb, var(--fg) 62%, transparent);
@@ -21897,7 +21897,7 @@ body:not(.welcome-ready) #welcome-screen {
   display: inline-flex;
   align-items: center;
   gap: 0;
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.75;
 }
 .task-log-running-label { font-style: normal; }
@@ -21908,7 +21908,7 @@ body:not(.welcome-ready) #welcome-screen {
   display: inline-flex;
   align-items: center;
   gap: 0;
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.75;
 }
 .task-log-running-inline .task-log-running-label { font-weight: 500; }
@@ -21932,7 +21932,7 @@ body:not(.welcome-ready) #welcome-screen {
   justify-content: center;
   gap: 3px;
   font-family: inherit;
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1;
   cursor: pointer;
   position: relative;
@@ -21976,7 +21976,7 @@ body:not(.welcome-ready) #welcome-screen {
 .task-log-row.is-skipped {
   padding: 4px 8px;
   opacity: 0.45;
-  font-size: 11px;
+  font-size: 14px;
   background: transparent;
 }
 .task-log-row.is-skipped .task-log-row-head { padding: 0; }
@@ -21995,7 +21995,7 @@ body:not(.welcome-ready) #welcome-screen {
 
 .task-log-account-tag {
   display: inline-block;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.02em;
   padding: 1px 7px;
@@ -22044,12 +22044,12 @@ body:not(.welcome-ready) #welcome-screen {
   border-radius: 4px;
   white-space: pre-wrap;
   word-break: break-word;
-  font-size: 11px;
+  font-size: 14px;
   max-height: 180px;
   overflow: auto;
 }
 .task-log-row-body code {
-  font-size: 11px;
+  font-size: 14px;
   background: color-mix(in srgb, var(--fg) 6%, transparent);
   padding: 1px 4px;
   border-radius: 3px;
@@ -22071,7 +22071,7 @@ body:not(.welcome-ready) #welcome-screen {
   color: var(--fg);
 }
 .task-log-row-body h1 { font-size: 14px; }
-.task-log-row-body h2 { font-size: 13px; }
+.task-log-row-body h2 { font-size: 14px; }
 .task-log-row-body h3,
 .task-log-row-body h4 { font-size: 12px; opacity: 0.9; }
 .task-log-row-body h1:first-child,
@@ -22096,7 +22096,7 @@ body:not(.welcome-ready) #welcome-screen {
   border-collapse: collapse;
   width: 100%;
   margin: 6px 0;
-  font-size: 11px;
+  font-size: 14px;
 }
 .task-log-row-body th,
 .task-log-row-body td {
@@ -22129,7 +22129,7 @@ body:not(.welcome-ready) #welcome-screen {
   border-radius: 5px;
   color: color-mix(in srgb, var(--fg) 60%, transparent);
   font-family: inherit;
-  font-size: 10px;
+  font-size: 14px;
   padding: 1px 6px;
   cursor: pointer;
   transition: background .15s, color .15s, border-color .15s;
@@ -22155,7 +22155,7 @@ body:not(.welcome-ready) #welcome-screen {
 /* Activity filter chips — toggle-out model: ON by default (solid),
    click to toggle OFF (dimmed + strikethrough) to hide that group. */
 .tasks-af-chip {
-  font-size: 11px;
+  font-size: 14px;
   padding: 3px 10px;
   border: 1px solid color-mix(in srgb, var(--fg) 16%, transparent);
   border-radius: 12px;
@@ -22203,7 +22203,7 @@ a.chat-link[href^="#research-"] {
   background: none;
   border: none;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   padding: 2px 0;
   color: transparent;          /* hide raw "Show more" text */
@@ -22217,7 +22217,7 @@ a.chat-link[href^="#research-"] {
 .task-log-row-toggle:hover::before { opacity: 1; }
 .task-log-prompt {
   margin-top: 6px;
-  font-size: 11px;
+  font-size: 14px;
 }
 .task-log-prompt summary {
   cursor: pointer;
@@ -22232,7 +22232,7 @@ a.chat-link[href^="#research-"] {
   border-radius: 4px;
   white-space: pre-wrap;
   word-break: break-word;
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.75;
   max-height: 200px;
   overflow: auto;
@@ -22297,7 +22297,7 @@ a.chat-link[href^="#research-"] {
 /* Bigger ⋮ dropdown on mobile (its buttons carry inline styles → !important). */
 @media (max-width: 768px) {
   .task-dropdown { min-width: 160px !important; padding: 6px !important; }
-  .task-dropdown button { font-size: 13px !important; padding: 10px 12px !important; gap: 10px !important; }
+  .task-dropdown button { font-size: 14px !important; padding: 10px 12px !important; gap: 10px !important; }
   .task-dropdown button svg { width: 15px !important; height: 15px !important; }
   .task-card .task-status-badge {
     padding-left: 5px;
@@ -22344,12 +22344,12 @@ a.chat-link[href^="#research-"] {
 }
 
 .task-card-output {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.45;
 }
 
 .task-card-prompt {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.55;
   margin: 4px 0;
   line-height: 1.4;
@@ -22369,7 +22369,7 @@ a.chat-link[href^="#research-"] {
 
 .task-btn {
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -22394,7 +22394,7 @@ a.chat-link[href^="#research-"] {
 .task-btn-danger:hover { opacity: 1; border-color: var(--red); }
 
 .tasks-clock {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.35;
   text-align: center;
   padding: 6px 0 8px;
@@ -22414,11 +22414,11 @@ a.chat-link[href^="#research-"] {
 }
 .task-preset-icon { font-size: 20px; margin-bottom: 2px; }
 .task-preset-label { font-size: 12px; font-weight: 600; }
-.task-preset-desc { font-size: 10px; opacity: 0.5; line-height: 1.3; }
+.task-preset-desc { font-size: 14px; opacity: 0.5; line-height: 1.3; }
 
 .task-form { display: flex; flex-direction: column; gap: 4px; }
 .task-form-label {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.55;
   font-weight: 500;
   display: block;
@@ -22428,7 +22428,7 @@ a.chat-link[href^="#research-"] {
 }
 .task-form-input {
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   padding: 6px 8px;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -22454,7 +22454,7 @@ select.task-form-input { text-overflow: ellipsis; }
   display: flex; gap: 4px;
 }
 .task-toggle-btn {
-  flex: 1; padding: 4px 8px; font-size: 10px; font-family: inherit;
+  flex: 1; padding: 4px 8px; font-size: 14px; font-family: inherit;
   border: 1px solid var(--border); border-radius: 6px; background: transparent;
   color: var(--fg); opacity: 0.4; cursor: pointer; transition: all 0.15s;
 }
@@ -22472,9 +22472,9 @@ select.task-form-input { text-overflow: ellipsis; }
 .task-time-select, .task-date-select {
   width: auto;
   min-width: 48px;
-  font-size: 11px;
+  font-size: 14px;
 }
-.task-time-sep { opacity: 0.4; font-size: 11px; }
+.task-time-sep { opacity: 0.4; font-size: 14px; }
 
 .task-history-header {
   display: flex;
@@ -22493,11 +22493,11 @@ select.task-form-input { text-overflow: ellipsis; }
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 14px;
 }
-.task-run-time { margin-left: auto; font-size: 10px; opacity: 0.45; }
+.task-run-time { margin-left: auto; font-size: 14px; opacity: 0.45; }
 .task-run-result {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.6;
   margin-top: 4px;
   line-height: 1.4;
@@ -22568,7 +22568,7 @@ input.settings-select::placeholder { color: color-mix(in srgb, var(--fg) 35%, tr
   border-left: 2px solid color-mix(in srgb, var(--fg) 12%, transparent);
 }
 .settings-fallback-num {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.4;
   min-width: 14px;
   text-align: right;
@@ -22685,7 +22685,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 .settings-fallback-add {
   align-self: flex-start;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 14px;
   padding: 3px 9px;
   border: 1px dashed var(--border);
   border-radius: 6px;
@@ -22861,11 +22861,11 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   gap: 1px;
 }
 .admin-tool-name {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
 }
 .admin-tool-desc {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.4;
 }
 .admin-tool-ctx {
@@ -22994,7 +22994,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 
 /* Cookbook model directory tags */
 .cookbook-modeldir-tag {
-  font-size: 11px;
+  font-size: 14px;
   padding: 3px 8px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--fg) 8%, transparent);
@@ -23020,7 +23020,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 }
 .cookbook-srv-default:hover { opacity: 0.8; }
 .cookbook-srv-default.active { opacity: 1; color: var(--accent, var(--red)); }
-.cookbook-srv-default-label { font-size: 10px; font-weight: 600; letter-spacing: 0.02em; }
+.cookbook-srv-default-label { font-size: 14px; font-weight: 600; letter-spacing: 0.02em; }
 /* Download-target toggle inside a model-dir tag */
 .cookbook-modeldir-dl {
   cursor: pointer;
@@ -23044,7 +23044,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 .cookbook-modeldir-rm {
   cursor: pointer;
   opacity: 0.4;
-  font-size: 10px;
+  font-size: 14px;
 }
 .cookbook-modeldir-rm:hover {
   opacity: 1;
@@ -23054,7 +23054,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--fg);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   height: 19.5px;
   box-sizing: border-box;
@@ -23245,7 +23245,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   position: relative;
 }
 .research-synapse-compact .rs-stage { height: 130px; }
-.research-synapse-compact .rs-meta { padding: 4px 8px 5px; font-size: 10px; }
+.research-synapse-compact .rs-meta { padding: 4px 8px 5px; font-size: 14px; }
 .research-synapse-compact .rs-label-sub { font-size: 8px; }
 .research-synapse svg {
   display: block;
@@ -23313,7 +23313,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 }
 .research-synapse .rs-label {
   fill: var(--fg);
-  font-size: 10px;
+  font-size: 14px;
   font-family: ui-monospace, "JetBrains Mono", monospace;
   pointer-events: none;
   opacity: 0.85;
@@ -23329,7 +23329,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   flex-wrap: wrap;
   padding: 6px 10px 8px;
   font-family: ui-monospace, "JetBrains Mono", monospace;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg-dim, var(--fg));
   opacity: 0.85;
   border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
@@ -23396,7 +23396,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   color: var(--fg);
   opacity: 0.6;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   transition: opacity 0.15s, border-color 0.15s;
 }
@@ -23532,7 +23532,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   border-radius: 3px;
   color: var(--fg);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   padding: 1px 4px;
   width: 140px;
   outline: none;
@@ -23560,7 +23560,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   display: flex; flex-direction: column; align-items: center; gap: 12px;
   padding: 48px 16px;
   opacity: 0.7;
-  font-size: 13px;
+  font-size: 14px;
 }
 .gallery-albums-grid {
   display: grid;
@@ -23642,12 +23642,12 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   display: flex; flex-direction: column; gap: 2px;
 }
 .gallery-album-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .gallery-album-count {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.55;
 }
 .gallery-album-card-add {
@@ -23694,7 +23694,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 .gallery-editor-landing p {
   margin: 0;
   opacity: 0.6;
-  font-size: 13px;
+  font-size: 14px;
   max-width: 320px;
 }
 .gallery-editor-landing-actions {
@@ -23706,7 +23706,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
    too small for the empty-state hero. */
 .gallery-editor-landing-actions .gallery-select-btn {
   padding: 7px 22px 17px;
-  font-size: 13px;
+  font-size: 14px;
   opacity: 0.85;
 }
 .gallery-editor-landing-actions .gallery-select-btn:hover { opacity: 1; }
@@ -23718,7 +23718,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   align-items: center;
   gap: 6px;
   margin-top: 18px;
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.55;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -23731,7 +23731,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   border: 1px solid var(--border);
   border-radius: 6px;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   text-transform: none;
   letter-spacing: normal;
   cursor: pointer;
@@ -23776,7 +23776,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 #gallery-editor-drafts-bulk { margin-top: -12px; }
 .gallery-editor-drafts-title {
   margin: 0;
-  font-size: 11px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   opacity: 0.55;
@@ -23887,7 +23887,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   text-overflow: ellipsis;
 }
 .gallery-editor-draft-meta {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.55;
   white-space: nowrap;
   overflow: hidden;
@@ -23971,7 +23971,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   .ge-alpha-badge { font-size: 8px; padding: 2px 5px; margin-right: 2px; }
 }
 .ge-diffusion-status {
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   padding: 2px 8px;
   border-radius: 4px;
@@ -24010,7 +24010,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   cursor: pointer;
 }
 .ge-topbar-mask-color-label {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.6;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -24152,7 +24152,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   color: inherit;
   opacity: 0.7;
   pointer-events: none;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1;
   font-weight: 700;
   left: 3px !important;
@@ -24164,7 +24164,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
    in the toolbar, just sitting inline next to the label. */
 .ge-btn-ai-mark {
   display: inline-block;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1;
   font-weight: 700;
   opacity: 0.75;
@@ -24305,7 +24305,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   justify-content: space-between;
   margin-bottom: 10px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
 }
 .ge-shortcuts-grid {
   display: grid;
@@ -24317,7 +24317,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 }
 .ge-shortcuts-col h5 {
   margin: 0 0 6px;
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.6;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -24346,7 +24346,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   align-items: center;
   justify-content: center;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   padding: 2px 6px;
   border: 1px solid color-mix(in srgb, var(--accent, #cc6a3a) 55%, transparent);
@@ -24359,7 +24359,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 }
 .ge-shortcuts-foot {
   margin-top: 12px;
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.55;
   text-align: center;
 }
@@ -24475,7 +24475,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 /* Small "Merge" text label next to each merge / flatten button so the
    icons read at a glance instead of needing the title-tooltip. */
 .ge-merge-label {
-  font-size: 10px;
+  font-size: 14px;
   margin-left: 4px;
   opacity: 0.75;
 }
@@ -24497,7 +24497,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   position: relative;
 }
 .ge-transform-field label {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   opacity: 0.65;
   min-width: 12px;
@@ -24514,7 +24514,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   border: 1px solid var(--border);
   border-radius: 4px;
   font: inherit;
-  font-size: 11px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   text-align: right;
   cursor: text;
@@ -24586,7 +24586,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   right: 20px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.55;
   pointer-events: none;
 }
@@ -24655,7 +24655,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   background: color-mix(in srgb, var(--accent, var(--red)) 25%, transparent);
 }
 .ge-transform-popup-hint {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.5;
   margin: 0;
   line-height: 1.3;
@@ -24739,7 +24739,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg);
 }
 .ge-control-row label {
@@ -24830,7 +24830,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 .ge-size-slider:active::-moz-range-thumb {
   width: 16px; height: 16px;
 }
-.ge-size-label { font-size: 10px; opacity: 0.5; min-width: 28px; text-align: right; }
+.ge-size-label { font-size: 14px; opacity: 0.5; min-width: 28px; text-align: right; }
 
 /* Eraser controls: tighter rows + a small brush preview on the left of
    each label so the user can see what each slider affects. The three
@@ -24853,7 +24853,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   padding: 0 4px;
   border-radius: 3px;
   cursor: text;
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.7;
   font-variant-numeric: tabular-nums;
 }
@@ -24867,7 +24867,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   flex: 0 0 auto;
   margin: 0 0 0 6px;
   padding: 0 4px;
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.7;
   font-variant-numeric: tabular-nums;
   min-width: 34px;
@@ -24891,14 +24891,14 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   min-width: 0;
 }
 .ge-tool-model-row > label {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.6;
   flex: 0 0 auto;
 }
 .ge-tool-model {
   flex: 1 1 0;
   min-width: 0;
-  font-size: 10px;
+  font-size: 14px;
   padding: 2px 4px;
   background: var(--bg);
   color: var(--fg);
@@ -24927,7 +24927,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   position: absolute;
   z-index: 11;
   font: inherit;
-  font-size: 10px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   padding: 1px 4px;
   border: 1px solid var(--red);
@@ -24960,10 +24960,10 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   width: 100%;
   text-align: left;
   padding: 5px 8px;
-  font-size: 11px;
+  font-size: 14px;
   gap: 8px;
   font: inherit;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 /* Thin separator inside a tool section. */
@@ -25025,7 +25025,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
    the mask actions (Eye / Invert / Clear) under a "Selection" header. */
 .ge-section-title {
   margin: 10px 0 4px;
-  font-size: 10px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   opacity: 0.5;
@@ -25042,7 +25042,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   flex: 0 0 auto;
 }
 .ge-inpaint-mask-label {
-  font-size: 10px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   opacity: 0.5;
@@ -25054,7 +25054,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
    the same length when unused. Without this, "Flow" (4 chars) leaves
    more room than "Opacity" (7 chars). */
 .ge-eraser-row label {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.55;
   flex: 0 0 78px;
   white-space: nowrap;
@@ -25156,7 +25156,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   box-shadow: 0 12px 32px rgba(0,0,0,0.45);
   display: flex;
   flex-direction: column;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg);
 }
 .ge-fx-popup-head {
@@ -25177,13 +25177,13 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   border-top: 1px solid var(--border);
 }
 .ge-fx-group-title {
-  font-size: 10px; font-weight: 600; opacity: 0.6;
+  font-size: 14px; font-weight: 600; opacity: 0.6;
   text-transform: uppercase; letter-spacing: 0.5px;
   margin: 8px 0 4px;
 }
 .ge-fx-group-title:first-child { margin-top: 0; }
 .ge-fx-cb-tone {
-  font-size: 10px; opacity: 0.55; font-style: italic;
+  font-size: 14px; opacity: 0.55; font-style: italic;
   margin: 4px 0 2px;
 }
 .ge-fx-row {
@@ -25191,7 +25191,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   padding: 2px 0;
 }
 .ge-fx-row-label {
-  font-size: 10px; opacity: 0.7;
+  font-size: 14px; opacity: 0.7;
   flex: 0 0 110px; white-space: nowrap;
 }
 .ge-fx-row input[type="range"] {
@@ -25211,7 +25211,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   background: var(--red); border: none; cursor: pointer;
 }
 .ge-fx-row-value {
-  font-size: 10px; opacity: 0.7; font-variant-numeric: tabular-nums;
+  font-size: 14px; opacity: 0.7; font-variant-numeric: tabular-nums;
   flex: 0 0 40px; text-align: right;
 }
 
@@ -25289,7 +25289,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   border-radius: 10px;
   display: flex;
   flex-direction: column;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg);
 }
 .ge-adj-popup .ge-adj-head {
@@ -25371,7 +25371,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   gap: 6px;
   padding: 5px 8px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg);
   cursor: pointer;
   pointer-events: auto;
@@ -25413,7 +25413,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   display: flex;
   flex-direction: column;
   color: var(--fg);
-  font-size: 11px;
+  font-size: 14px;
 }
 .ge-history-head {
   display: flex; align-items: center; gap: 6px;
@@ -25437,7 +25437,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   padding: 5px 10px;
   background: none; border: none;
   text-align: left; cursor: pointer;
-  color: var(--fg); font-size: 11px;
+  color: var(--fg); font-size: 14px;
 }
 .ge-history-row:hover { background: color-mix(in srgb, var(--fg) 8%, transparent); }
 .ge-history-row.current { background: color-mix(in srgb, var(--accent, var(--red)) 18%, transparent); }
@@ -25514,13 +25514,13 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   border: 1px solid color-mix(in srgb, var(--accent, var(--red)) 30%, transparent);
   border-radius: 6px;
   margin: 4px 0 8px;
-  font-size: 11px;
+  font-size: 14px;
 }
 .ge-dep-notice-text { flex: 1 1 auto; line-height: 1.4; }
 .ge-dep-notice-text strong { display: block; margin-bottom: 2px; }
 .ge-dep-notice-text code {
   font-family: 'Fira Code', monospace;
-  font-size: 10px;
+  font-size: 14px;
   padding: 1px 4px;
   border-radius: 3px;
   background: color-mix(in srgb, var(--fg) 10%, transparent);
@@ -25646,7 +25646,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   .ge-adj-foot .ge-adj-cancel-btn,
   .ge-adj-foot .ge-adj-apply-btn {
     padding: 8px 16px !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     min-width: 80px;
     text-align: center;
   }
@@ -25660,7 +25660,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 }
 .ge-adj-row > label {
   flex: 0 0 96px;
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.7;
 }
 .ge-adj-row input[type="range"] {
@@ -25714,14 +25714,14 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   flex: 0 0 34px;
   margin-left: 0;
   padding: 0 2px;
-  font-size: 10px; opacity: 0.7; text-align: left;
+  font-size: 14px; opacity: 0.7; text-align: left;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   cursor: text;
 }
 .ge-adj-value:hover { opacity: 1; }
 .ge-adj-cb-tone {
-  font-size: 10px; opacity: 0.55; font-style: italic;
+  font-size: 14px; opacity: 0.55; font-style: italic;
   margin: 2px 0 0;
   line-height: 1;
 }
@@ -25751,7 +25751,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   margin-bottom: 8px;
 }
 .ge-adj-hist-details > summary {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg-muted);
   cursor: pointer;
   padding: 4px 0;
@@ -25879,7 +25879,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   border-radius: 4px;
   background: var(--bg);
   color: var(--fg);
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -25889,7 +25889,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   border-color: var(--accent, var(--red));
   color: var(--accent, var(--red));
 }
-.ge-btn-sm { padding: 3px 6px; font-size: 10px; }
+.ge-btn-sm { padding: 3px 6px; font-size: 14px; }
 /* Busy state on AI tool buttons — whirlpool + verb text side by side. */
 .ge-btn-processing {
   display: inline-flex;
@@ -25916,7 +25916,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 .ge-mask-vis-btn.visible:hover { opacity: 1; }
 /* Paint/Erase segmented toggle in the Inpaint Brush section. */
 .ge-inpaint-mode-btn {
-  font-size: 11px;
+  font-size: 14px;
   padding: 4px 8px;
   opacity: 0.6;
   border: 1px solid var(--border);
@@ -25932,7 +25932,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 /* Wand New / + Add / − Subtract segmented toggle. */
 .ge-wand-mode-btn {
   flex: 1 1 0;
-  font-size: 11px;
+  font-size: 14px;
   padding: 4px 6px;
   opacity: 0.6;
   border: 1px solid var(--border);
@@ -25952,7 +25952,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   height: 22px;
   padding: 0 10px !important;
   border-radius: 999px !important;
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1;
   background: color-mix(in srgb, var(--fg) 5%, transparent);
   transition: opacity 0.15s, color 0.15s, border-color 0.15s, background 0.15s;
@@ -26188,7 +26188,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   gap: 8px;
 }
 .ge-filter-modal-head {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -26200,7 +26200,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   gap: 2px;
 }
 .ge-filter-row label {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.7;
   display: flex;
   justify-content: space-between;
@@ -26231,7 +26231,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   gap: 8px;
 }
 .ge-edge-label {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.65;
 }
 .ge-edge-input {
@@ -26251,7 +26251,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 .ge-edge-actions .ge-btn { flex: 1; }
 .ge-edge-hint {
   margin: 0;
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.5;
   line-height: 1.4;
 }
@@ -26277,7 +26277,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   min-width: 0;
 }
 .ge-canvas-prompt-field > span {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.65;
 }
 .ge-canvas-prompt-field input {
@@ -26299,7 +26299,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
 }
 .ge-canvas-prompt-hint {
   margin: 12px 0 0;
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.5;
   text-align: center;
 }
@@ -26311,7 +26311,7 @@ details.hwfit-serve-advanced > .hwfit-serve-checks:last-of-type {
   font-weight: 600;
 }
 .ge-btn-primary:hover { background: color-mix(in srgb, var(--red) 85%, #000); }
-.ge-zoom-label { font-size: 10px; opacity: 0.5; }
+.ge-zoom-label { font-size: 14px; opacity: 0.5; }
 
 /* Nudge whirlpool spinners 1px down so they sit on the text baseline
    when placed inside action buttons (Generate, Harmonize, etc). */
@@ -26380,7 +26380,7 @@ button .spinner-whirlpool {
   padding: 5px 10px;
   background: var(--red);
   color: #fff;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   border-radius: 6px;
@@ -26426,7 +26426,7 @@ button .spinner-whirlpool {
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg);
   opacity: 0.8;
@@ -26486,7 +26486,7 @@ button .spinner-whirlpool {
   flex: 0 0 auto;
   min-width: 0;
   padding: 4px 8px;
-  font-size: 10px;
+  font-size: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -26517,7 +26517,7 @@ button .spinner-whirlpool {
   cursor: pointer;
   border-left: 2px solid transparent;
   transition: background 0.1s;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--fg);
 }
 /* Row-hover tint removed — kept the layer row's background stable so
@@ -26561,7 +26561,7 @@ button .spinner-whirlpool {
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--fg);
-  font-size: 11px;
+  font-size: 14px;
   padding: 1px 4px;
   border-radius: 3px;
   min-width: 0;
@@ -26740,7 +26740,7 @@ button .spinner-whirlpool {
   border: 1px solid var(--border);
   border-radius: 4px;
   font: inherit;
-  font-size: 11px;
+  font-size: 14px;
   -moz-appearance: textfield;
 }
 .ge-crop-apply input[type="number"]::-webkit-outer-spin-button,
@@ -26748,14 +26748,14 @@ button .spinner-whirlpool {
   -webkit-appearance: none;
   margin: 0;
 }
-.ge-crop-x { font-size: 11px; opacity: 0.5; }
+.ge-crop-x { font-size: 14px; opacity: 0.5; }
 .ge-crop-apply-btn {
   padding: 4px 10px;
   background: var(--red);
   color: #fff;
   border: none;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   position: relative;
@@ -26857,13 +26857,13 @@ button .spinner-whirlpool {
 }
 .ge-inpaint-model-row label {
   flex: 0 0 auto;
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.65;
 }
 .ge-inpaint-model-row #ge-ai-inpaint {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 10px;
+  font-size: 14px;
   padding: 4px 6px;
   background: var(--bg);
   color: var(--fg);
@@ -27128,7 +27128,7 @@ button .spinner-whirlpool {
   .ge-transform-popup-body #ge-transform-cancel-btn,
   .ge-transform-popup-body #ge-transform-apply {
     padding: 8px 16px !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     min-width: 80px;
     text-align: center;
   }
@@ -27297,7 +27297,7 @@ button .spinner-whirlpool {
   .ge-topbar .ge-btn,
   .ge-topbar .ge-btn-sm {
     padding: 7px 11px !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     min-height: 34px;
     line-height: 1;
     top: 0 !important;
@@ -27503,7 +27503,7 @@ button .spinner-whirlpool {
   gap: 8px;
 }
 .email-field label {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--fg);
   opacity: 0.5;
@@ -27516,7 +27516,7 @@ button .spinner-whirlpool {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 5px 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-family: inherit;
   color: var(--fg);
   outline: none;
@@ -27548,7 +27548,7 @@ button .spinner-whirlpool {
 .email-folder-bar { padding: 4px 8px; border-bottom: 1px solid var(--border); }
 .email-folder-select {
   background: transparent; border: 1px solid var(--border); border-radius: 4px;
-  color: var(--fg); font-size: 11px; padding: 2px 6px; cursor: pointer; width: 100%; height: 26px;
+  color: var(--fg); font-size: 14px; padding: 2px 6px; cursor: pointer; width: 100%; height: 26px;
 }
 .email-list { overflow-y: auto; max-height: 400px; }
 .email-item {
@@ -27569,7 +27569,7 @@ button .spinner-whirlpool {
 }
 .email-spam-unflag {
   background: none; border: none; color: inherit; cursor: pointer;
-  padding: 0 2px; font-size: 10px; line-height: 1; opacity: 0.6;
+  padding: 0 2px; font-size: 14px; line-height: 1; opacity: 0.6;
 }
 .email-spam-unflag:hover { opacity: 1; color: var(--fg); }
 /* Unread state is now a subtle icon, not full styling */
@@ -27764,7 +27764,7 @@ button .spinner-whirlpool {
   flex: 1; min-width: 0;
 }
 .email-reader-meta {
-  min-width: 0; opacity: 0.85; line-height: 1.7; font-size: 11px;
+  min-width: 0; opacity: 0.85; line-height: 1.7; font-size: 14px;
   display: flex; flex-direction: column; gap: 4px;
 }
 .email-reader-meta-row {
@@ -27785,7 +27785,7 @@ button .spinner-whirlpool {
 .recipient-chip {
   display: inline-flex; align-items: center;
   gap: 5px;
-  padding: 1px 8px; font-size: 10px;
+  padding: 1px 8px; font-size: 14px;
   background: color-mix(in srgb, var(--fg) 6%, transparent);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -27960,7 +27960,7 @@ button .spinner-whirlpool {
   text-overflow: ellipsis;
 }
 .from-sender-addr {
-  font-size: 10px;
+  font-size: 14px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   opacity: 0.55;
   margin-top: 2px;
@@ -27969,7 +27969,7 @@ button .spinner-whirlpool {
   text-overflow: ellipsis;
 }
 .from-sender-count {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.6;
   margin-top: 4px;
   text-transform: uppercase;
@@ -27984,7 +27984,7 @@ button .spinner-whirlpool {
   gap: 6px;
 }
 .from-sender-loading { display: flex; justify-content: center; padding: 24px 0; }
-.from-sender-empty { padding: 16px 12px; font-size: 11px; opacity: 0.6; }
+.from-sender-empty { padding: 16px 12px; font-size: 14px; opacity: 0.6; }
 /* Chat-bubble feel — each email row is a self-contained darker bubble. */
 .from-sender-row {
   position: relative;
@@ -28088,7 +28088,7 @@ button .spinner-whirlpool {
 }
 .from-sender-row:hover .from-sender-att { opacity: 0.85; }
 .from-sender-date {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.55;
   flex-shrink: 0;
 }
@@ -28113,7 +28113,7 @@ button .spinner-whirlpool {
   flex-shrink: 0;
 }
 .from-sender-header-empty {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.6;
   letter-spacing: 0.3px;
   text-transform: uppercase;
@@ -28241,7 +28241,7 @@ button .spinner-whirlpool {
 }
 .from-sender-suggest-item .suggest-name { font-weight: 500; }
 .from-sender-suggest-item .suggest-addr {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.55;
   margin-left: auto;
   white-space: nowrap;
@@ -28273,7 +28273,7 @@ button .spinner-whirlpool {
   color: var(--accent, var(--red));
   border-radius: 999px;
   padding: 2px 4px 2px 8px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
   max-width: 60%;
   flex-shrink: 0;
@@ -28373,7 +28373,7 @@ button .spinner-whirlpool {
 }
 .email-summary-header {
   display: flex; align-items: center; gap: 5px;
-  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  font-size: 14px; font-weight: 600; text-transform: uppercase;
   color: var(--accent-primary, var(--red)); opacity: 0.85;
   margin-bottom: 6px; letter-spacing: 0.4px;
 }
@@ -28399,7 +28399,7 @@ button .spinner-whirlpool {
 .email-reader-atts-header {
   display: flex; align-items: center; gap: 5px;
   padding: 6px 14px;
-  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  font-size: 14px; font-weight: 600; text-transform: uppercase;
   color: var(--fg); opacity: 0.7;
   cursor: pointer; user-select: none;
   letter-spacing: 0.4px;
@@ -28471,7 +28471,7 @@ button .spinner-whirlpool {
 }
 .email-thread-turn-body .email-thread-turn .email-thread-turn-body {
   padding: 6px 10px 2px;
-  font-size: 11px;
+  font-size: 14px;
 }
 /* The original blockquote's left stripe is redundant when each turn is
    already a card — drop it inside thread bodies. */
@@ -28495,7 +28495,7 @@ button .spinner-whirlpool {
 /* "From … · Date …" chip appended to the summary line */
 .email-fold-summary-meta {
   margin-left: 6px;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   text-transform: none;
   letter-spacing: 0;
@@ -28508,7 +28508,7 @@ button .spinner-whirlpool {
 /* Sender name is the primary affordance — slightly larger and not all-caps so
    "From: Sam" feels like a click target on the person, not a section label. */
 .email-fold-summary-name {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   text-transform: none;
   letter-spacing: 0.1px;
@@ -28522,7 +28522,7 @@ button .spinner-whirlpool {
   display: flex; align-items: center; gap: 5px;
   padding: 6px 14px;
   cursor: pointer; list-style: none;
-  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  font-size: 14px; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.4px;
   /* Force neutral page colors regardless of any rich-mail HTML wrapping us */
   color: var(--fg) !important;
@@ -28583,7 +28583,7 @@ button .spinner-whirlpool {
 .email-sig-fold[open] > *:not(summary) {
   padding: 6px 0 0;
   border-top: 0;
-  font-size: 11px; line-height: 1.45;
+  font-size: 14px; line-height: 1.45;
   color: color-mix(in srgb, var(--fg) 75%, transparent);
   white-space: pre-wrap;
 }
@@ -28764,7 +28764,7 @@ button .spinner-whirlpool {
   padding: 16px 18px 12px;
 }
 .schedule-send-label {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.3px;
   text-transform: uppercase;
@@ -28792,7 +28792,7 @@ button .spinner-whirlpool {
   margin-right: 6px;
 }
 .schedule-send-datetime {
-  font-size: 13px;
+  font-size: 14px;
   padding: 8px 10px;
   background: var(--bg);
   color: var(--fg);
@@ -28958,7 +28958,7 @@ body.doc-find-active mark.doc-find-mark.current {
 .emoji-picker-groups { overflow-y: auto; padding: 4px 0; flex: 1; }
 .emoji-picker-group { padding: 0 6px 4px 6px; }
 .emoji-picker-group-name {
-  font-size: 10px; font-weight: 600; opacity: 0.5;
+  font-size: 14px; font-weight: 600; opacity: 0.5;
   text-transform: uppercase; letter-spacing: 0.5px;
   padding: 4px 4px 2px 4px;
 }
@@ -28990,7 +28990,7 @@ body.doc-find-active mark.doc-find-mark.current {
   margin: 4px 8px 6px;
   padding: 4px 8px;
   border-radius: 12px;
-  font-size: 11px;
+  font-size: 14px;
   background: color-mix(in srgb, var(--accent, var(--red)) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent, var(--red)) 40%, transparent);
   color: var(--fg);
@@ -29007,8 +29007,8 @@ body.doc-find-active mark.doc-find-mark.current {
   opacity: 0.6;
 }
 .email-filter-chip-clear:hover { opacity: 1; }
-.email-date { font-size: 10px; opacity: 0.5; white-space: nowrap; flex-shrink: 0; }
-.email-subject { font-size: 11px; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.email-date { font-size: 14px; opacity: 0.5; white-space: nowrap; flex-shrink: 0; }
+.email-subject { font-size: 14px; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 .email-tags { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
 .email-tag {
   display: inline-block;
@@ -29053,7 +29053,7 @@ body.doc-find-active mark.doc-find-mark.current {
 .email-load-more { padding: 8px; text-align: center; }
 .email-load-more-btn {
   background: transparent; border: 1px solid var(--border); border-radius: 4px;
-  color: var(--fg); padding: 4px 12px; font-size: 11px; cursor: pointer;
+  color: var(--fg); padding: 4px 12px; font-size: 14px; cursor: pointer;
 }
 .email-load-more-btn:hover { background: var(--hover-bg, rgba(255,255,255,0.05)); }
 .email-spinner {
@@ -29086,7 +29086,7 @@ body.doc-find-active mark.doc-find-mark.current {
 #email-compose-btn .list-item-plus-label {
   top: calc(50% - 0.5px);
   color: var(--fg);
-  font-size: 10px;
+  font-size: 14px;
 }
 #email-compose-btn:hover svg {
   transform: rotate(180deg) scale(1.15);
@@ -29342,7 +29342,7 @@ body.doc-find-active mark.doc-find-mark.current {
   background: transparent;
   color: var(--fg);
   font: inherit;
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   opacity: 0.72;
   text-align: left;
@@ -29375,10 +29375,10 @@ body.doc-find-active mark.doc-find-mark.current {
   transform: rotate(180deg);
 }
 .email-field { display: flex; align-items: center; gap: 8px; position: relative; }
-.email-field label { font-size: 11px; font-weight: 600; color: var(--fg); opacity: 0.5; min-width: 50px; text-align: right; flex-shrink: 0; }
+.email-field label { font-size: 14px; font-weight: 600; color: var(--fg); opacity: 0.5; min-width: 50px; text-align: right; flex-shrink: 0; }
 .email-field input {
   flex: 1; width: 100%; background: transparent; border: 1px solid var(--border); border-radius: 4px;
-  padding: 5px 8px; font-size: 13px; font-family: inherit; color: var(--fg); outline: none;
+  padding: 5px 8px; font-size: 14px; font-family: inherit; color: var(--fg); outline: none;
   min-width: 0;
 }
 .email-field input:focus { border-color: var(--accent, #4a9eff); }
@@ -29461,7 +29461,7 @@ body.doc-find-active mark.doc-find-mark.current {
   color: var(--accent-primary, var(--red));
   border: 1px solid color-mix(in srgb, var(--accent-primary, var(--red)) 50%, transparent);
   border-radius: 6px;
-  padding: 0 14px; height: 28px; font-size: 11px; font-weight: 600; cursor: pointer;
+  padding: 0 14px; height: 28px; font-size: 14px; font-weight: 600; cursor: pointer;
   font-family: inherit; transition: all 0.15s; white-space: nowrap;
   display: inline-flex; align-items: center; gap: 6px;
 }
@@ -29488,7 +29488,7 @@ body.doc-find-active mark.doc-find-mark.current {
   background: none; border: 1px solid var(--border);
   color: color-mix(in srgb, var(--fg) 60%, transparent);
   border-radius: 6px;
-  padding: 0 12px; height: 28px; font-size: 11px; cursor: pointer;
+  padding: 0 12px; height: 28px; font-size: 14px; cursor: pointer;
   font-family: inherit; transition: all 0.15s; white-space: nowrap;
 }
 .email-draft-btn:hover { border-color: var(--fg); color: var(--fg); }
@@ -29525,7 +29525,7 @@ body.doc-find-active mark.doc-find-mark.current {
 }
 .email-attachment-chip {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 4px 8px; font-size: 11px; background: var(--hover-bg, rgba(255,255,255,0.05));
+  padding: 4px 8px; font-size: 14px; background: var(--hover-bg, rgba(255,255,255,0.05));
   border: 1px solid var(--border); border-radius: 12px; color: var(--fg);
   text-decoration: none; cursor: pointer; transition: background 0.15s, border-color 0.15s;
   max-width: 200px; min-width: 0;
@@ -29545,7 +29545,7 @@ body.doc-find-active mark.doc-find-mark.current {
   overflow: visible;
   text-overflow: clip;
 }
-.email-attachment-chip .att-size { opacity: 0.5; font-size: 10px; flex-shrink: 0; }
+.email-attachment-chip .att-size { opacity: 0.5; font-size: 14px; flex-shrink: 0; }
 /* "Open in editor" launch icon — same prominent style on desktop AND mobile
    (was 24px / dim / no border on desktop, easy to miss). Accent-tinted
    background + border makes it read as a real action. */
@@ -29553,7 +29553,7 @@ body.doc-find-active mark.doc-find-mark.current {
   display: inline-flex; align-items: center; gap: 4px;
   height: 22px; padding: 0 9px; border-radius: 11px;
   margin-left: 6px; flex-shrink: 0;
-  font-size: 10px; font-weight: 500; letter-spacing: 0.02em;
+  font-size: 14px; font-weight: 500; letter-spacing: 0.02em;
   color: var(--accent-primary, var(--red));
   background: color-mix(in srgb, var(--accent-primary, var(--red)) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent-primary, var(--red)) 40%, transparent);
@@ -29623,12 +29623,12 @@ body.doc-find-active mark.doc-find-mark.current {
 }
 .email-compose-chip {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 4px 4px 4px 8px; font-size: 11px;
+  padding: 4px 4px 4px 8px; font-size: 14px;
   background: var(--hover-bg, rgba(255,255,255,0.05));
   border: 1px solid var(--border); border-radius: 12px; color: var(--fg);
 }
 .email-compose-chip .compose-chip-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.email-compose-chip .att-size { opacity: 0.5; font-size: 10px; }
+.email-compose-chip .att-size { opacity: 0.5; font-size: 14px; }
 .email-compose-chip .compose-chip-remove {
   background: none; border: none; color: var(--fg); opacity: 0.5;
   font-size: 16px; line-height: 1; padding: 0 4px; cursor: pointer;
@@ -29637,7 +29637,7 @@ body.doc-find-active mark.doc-find-mark.current {
 
 .email-cc-toggle {
   background: none; border: none; color: var(--fg);
-  opacity: 0.4; font-size: 11px; cursor: pointer;
+  opacity: 0.4; font-size: 14px; cursor: pointer;
   padding: 4px 8px; font-family: inherit;
 }
 .email-cc-toggle:hover {
@@ -29676,13 +29676,13 @@ body.doc-find-active mark.doc-find-mark.current {
   background: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 .contact-suggestion .contact-name { font-weight: 600; color: var(--fg); }
-.contact-suggestion .contact-email { opacity: 0.6; font-size: 11px; }
+.contact-suggestion .contact-email { opacity: 0.6; font-size: 14px; }
 .email-ai-reply-btn {
   background: none;
   color: color-mix(in srgb, var(--fg) 60%, transparent);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 0 12px; height: 28px; font-size: 11px; cursor: pointer;
+  padding: 0 12px; height: 28px; font-size: 14px; cursor: pointer;
   font-family: inherit; transition: all 0.15s;
   display: inline-flex; align-items: center; white-space: nowrap;
 }
@@ -29706,7 +29706,7 @@ body.doc-find-active mark.doc-find-mark.current {
 @media (max-width: 768px) {
   #email-lib-compose-btn {
     padding: 8px 14px !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     min-height: 36px;
     border-radius: 8px;
     font-weight: 600;
@@ -30256,7 +30256,7 @@ body.notes-drag-mode .note-card-pin svg {
 .note-fullscreen-overlay .note-form-actions-group .note-form-label {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 13px;
+  font-size: 14px;
   padding: 8px 10px;
   margin: 0 auto 0 0;
   background: transparent;
@@ -30468,7 +30468,7 @@ body.notes-drag-mode .note-card-pin svg {
   padding: 6px 0;
   flex: 1;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   display: flex;
   align-items: center;
@@ -30512,7 +30512,7 @@ body.notes-drag-mode .note-card-pin svg {
   .notes-header-text-btn { width: 32px !important; padding: 0 !important; }
 }
 .notes-header-btn-label {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1;
   letter-spacing: 0.2px;
@@ -30592,7 +30592,7 @@ body.notes-drag-mode .note-card-pin svg {
   color: var(--accent, var(--red));
   border-radius: 999px;
   padding: 3px 10px 3px 8px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   margin-top: 2px;
@@ -30972,7 +30972,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   margin-left: 6px;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 500;
   font-family: inherit;
   background: color-mix(in srgb, var(--accent, var(--red)) 14%, transparent);
@@ -31254,7 +31254,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   color: var(--accent, var(--red));
   margin-right: 6px;
   font-weight: 500;
-  font-size: 13px;
+  font-size: 14px;
   animation: notes-quick-caret 1s steps(2, jump-none) infinite;
   pointer-events: none;
 }
@@ -31380,7 +31380,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
      (WCAG AA) while staying visibly secondary. */
   opacity: 0.65;
   padding: 30px 20px;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 /* Loading skeleton */
@@ -31493,7 +31493,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   border: none;
   border-radius: 12px;
   padding: 4px 4px 4px 9px;
-  font-size: 10px;
+  font-size: 14px;
   font-family: inherit;
   cursor: pointer;
   font-weight: 500;
@@ -31550,7 +31550,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   font-size: 12px;
 }
 .note-reminder-menu-title {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
   opacity: 0.5;
@@ -31575,7 +31575,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
 .note-reminder-menu-item:hover { background: color-mix(in srgb, var(--fg) 6%, transparent); }
 .note-reminder-menu-item.active { color: var(--accent); }
 .note-reminder-menu-sub {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.5;
   margin-left: 12px;
 }
@@ -31628,7 +31628,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   border: none;
   color: var(--fg);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.7;
   padding: 6px 12px;
   cursor: pointer;
@@ -31641,7 +31641,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   line-height: 1;
 }
 .note-reminder-menu-sublabel {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.5;
   padding: 6px 14px 2px;
   letter-spacing: 0.3px;
@@ -31661,7 +31661,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   border-radius: 4px;
   color: var(--fg);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
@@ -31731,7 +31731,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   color: color-mix(in srgb, var(--fg) 40%, transparent);
   cursor: pointer;
   padding: 0 12px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   font-family: inherit;
   transition: color 0.2s;
@@ -31801,7 +31801,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   border: 1px solid var(--border);
   border-radius: 6px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   height: 30px;
   padding: 0 12px;
   cursor: pointer;
@@ -31820,7 +31820,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   min-width: 0;
   height: 30px;
   min-height: 30px;
-  font-size: 11px;
+  font-size: 14px;
   padding: 0 10px 0 28px;
   background-color: var(--bg);
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e06c75' stroke-opacity='0.85' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
@@ -31960,7 +31960,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   background: transparent;
   border: 1px solid var(--border);
   color: color-mix(in srgb, var(--fg) 60%, transparent);
-  font-size: 10px;
+  font-size: 14px;
   padding: 3px 10px;
   border-radius: 10px;
   cursor: pointer;
@@ -32098,7 +32098,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   border-radius: 6px;
   color: var(--fg);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   padding: 8px 10px;
   resize: vertical;
   min-height: 60px;
@@ -32135,7 +32135,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   cursor: wait;
 }
 .note-form-goal-hint {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.55;
 }
 /* Fresh goal form: hide the title input + tag input + reminder button so the
@@ -32183,7 +32183,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -32235,7 +32235,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   gap: 2px;
 }
 .notes-today-title {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--accent-warm);
   letter-spacing: 0.03em;
@@ -32252,7 +32252,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
 }
 .notes-today-progress {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   opacity: 0.6;
   font-variant-numeric: tabular-nums;
@@ -32260,14 +32260,14 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
 .notes-empty {
   text-align: center;
   padding: 32px 16px;
-  font-size: 13px;
+  font-size: 14px;
   opacity: 0.55;
   font-style: italic;
 }
 
 /* Bulk action bar */
 .notes-bulk-info {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.6;
   margin-left: 4px;
 }
@@ -32281,7 +32281,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   background: transparent;
   border: 1px dashed color-mix(in srgb, var(--border) 60%, transparent);
   color: var(--fg);
-  font-size: 11px;
+  font-size: 14px;
   padding: 3px 6px;
   border-radius: 4px;
   outline: none;
@@ -32307,7 +32307,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   gap: 6px;
 }
 .note-card-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   flex: 1;
@@ -32506,7 +32506,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
 }
 .note-checklist-preview:empty::before {
   content: 'No todos';
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.3;
   font-style: italic;
 }
@@ -32534,7 +32534,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   border: none;
   border-top: 1px dashed color-mix(in srgb, var(--border) 60%, transparent);
   color: var(--fg);
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   padding: 4px 2px 2px;
   outline: none;
@@ -32548,7 +32548,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 14px;
   cursor: pointer;
   /* Vertical padding stays 0 so short single-line rows pack tightly.
      Left padding bumped so the dot's hover-scale (1.15x) doesn't clip
@@ -32669,7 +32669,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
 
 /* Due date badge */
 .note-due-badge {
-  font-size: 10px;
+  font-size: 14px;
   padding: 1px 6px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--fg) 10%, transparent);
@@ -32829,7 +32829,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--fg);
-  font-size: 11px;
+  font-size: 14px;
   padding: 3px 10px;
   border-radius: 4px;
   cursor: pointer;
@@ -33189,7 +33189,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
 .note-form-draw-circle.size-m svg circle { stroke-width: 3; }
 .note-form-draw-line.size-l svg line,
 .note-form-draw-circle.size-l svg circle { stroke-width: 5; }
-.note-form-draw-text.size-s { font-size: 13px; }
+.note-form-draw-text.size-s { font-size: 14px; }
 .note-form-draw-text.size-m { font-size: 18px; }
 .note-form-draw-text.size-l { font-size: 23px; line-height: 1; }
 /* Narrow widths: shrink the tag input to make room for the action group;
@@ -33201,7 +33201,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   background: transparent;
   border: 1px dashed color-mix(in srgb, var(--border) 60%, transparent);
   color: var(--fg);
-  font-size: 11px;
+  font-size: 14px;
   padding: 3px 6px;
   border-radius: 4px;
   outline: none;
@@ -33222,7 +33222,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--fg);
-  font-size: 11px;
+  font-size: 14px;
   padding: 4px 12px;
   border-radius: 4px;
   cursor: pointer;
@@ -33307,7 +33307,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
   color: var(--fg);
   opacity: 0.4;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 14px;
   padding: 4px 0;
   text-align: left;
 }
@@ -33424,7 +33424,7 @@ body.notes-mobile-mode.notes-drag-mode .note-card-pin.active {
 }
 .cal-quickadd-input::placeholder { color: transparent; }
 .cal-quickadd-status {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.55;
   font-variant-numeric: tabular-nums;
 }
@@ -33512,7 +33512,7 @@ button.cal-add-btn.cal-add-btn-text.cal-add-btn-sm:hover {
    the reference and we want the same rotation centre / motion. The label
    is shrunk and hidden until hover so the pill is compact at rest. */
 button.cal-add-btn.cal-add-btn-text.cal-add-btn-sm .cal-add-label {
-  font-size: 10px;
+  font-size: 14px;
   max-width: 0;
   margin-left: 0;
   opacity: 0;
@@ -33551,7 +33551,7 @@ button.cal-add-btn.cal-add-btn-text.cal-add-btn-sm:hover .cal-add-label {
     display: none;
   }
   .cal-add-plus { font-size: 22px; padding-bottom: 1px; }
-  .cal-add-label { font-size: 13px; }
+  .cal-add-label { font-size: 14px; }
   .cal-wk-zoom {
     width: 36px;
     height: 36px;
@@ -33832,7 +33832,7 @@ button.cal-add-btn.cal-add-btn-text.cal-add-btn-sm:hover .cal-add-label {
   flex: 0 0 auto;
 }
 .email-accounts-loading-label {
-  font-size: 10px;
+  font-size: 14px;
   opacity: 0.55;
   position: relative;
   top: 2px;
@@ -33848,7 +33848,7 @@ button.cal-add-btn.cal-add-btn-text.cal-add-btn-sm:hover .cal-add-label {
   text-align: center;
 }
 .email-loading-label {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.6;
 }
 
@@ -33894,7 +33894,7 @@ button.cal-view-btn {
   background: transparent;
   border: none;
   color: var(--fg);
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   font-weight: 500;
   padding: 2px 12px 2px 12px;
@@ -33937,7 +33937,7 @@ button.cal-view-btn {
   border: 1px solid var(--border);
   color: var(--fg);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   font-weight: 500;
   padding: 0 10px;
@@ -34090,7 +34090,7 @@ button.cal-view-btn {
 .cal-event-name { font-size:12px; font-weight:500; }
 .cal-event-tag {
   display: inline-block;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   padding: 1px 6px;
   border-radius: 8px;
@@ -34173,7 +34173,7 @@ button.cal-view-btn {
   border-color: color-mix(in srgb, var(--accent, var(--fg)) 50%, var(--border));
 }
 .cal-wk-rail-cell {
-  font-size: 11px;
+  font-size: 14px;
   color: color-mix(in srgb, var(--fg) 55%, transparent);
   padding: 4px 8px 0;
   border-bottom: 1px solid color-mix(in srgb, var(--fg) 5%, transparent);
@@ -34202,7 +34202,7 @@ button.cal-view-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 14px;
   flex-shrink: 0;
   background: color-mix(in srgb, var(--fg) 3%, var(--bg));
   border-bottom: 1px solid color-mix(in srgb, var(--fg) 5%, transparent);
@@ -34246,7 +34246,7 @@ button.cal-view-btn {
 }
 .cal-wk-allday::-webkit-scrollbar { display: none; }
 .cal-wk-allday-event {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   padding: 2px 5px;
   border-radius: 3px;
@@ -34295,7 +34295,7 @@ button.cal-view-btn {
   border-left: 3px solid var(--fg);
   border-radius: 4px;
   padding: 4px 7px;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.25;
   cursor: pointer;
   overflow: hidden;
@@ -34305,8 +34305,8 @@ button.cal-view-btn {
   box-sizing: border-box;
 }
 .cal-wk-block:hover { filter: brightness(1.05); transform: translateY(-0.5px); }
-.cal-wk-block-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
-.cal-wk-block-time { font-size: 10px; opacity: 0.75; font-variant-numeric: tabular-nums; margin-top: 1px; }
+.cal-wk-block-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+.cal-wk-block-time { font-size: 14px; opacity: 0.75; font-variant-numeric: tabular-nums; margin-top: 1px; }
 @media (max-width: 768px) {
   /* Mobile week view: the hour rail already shows the time, so drop it from the
      card and let the title wrap to fill the freed space (more readable text). */
@@ -34363,7 +34363,7 @@ button.cal-view-btn {
   border-radius: 4px;
   pointer-events: none;
   z-index: 3;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -34445,7 +34445,7 @@ button.cal-view-btn {
 #sidebar-assistant-gear:hover { opacity: 0.8 !important; }
 .assistant-settings-form { display: flex; flex-direction: column; gap: 12px; padding: 4px 2px 2px; }
 .assistant-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: color-mix(in srgb, var(--fg) 70%, transparent); }
-.assistant-field > span { font-size: 11px; opacity: 0.6; }
+.assistant-field > span { font-size: 14px; opacity: 0.6; }
 .assistant-field input[type="text"],
 .assistant-field input[type="time"],
 .assistant-field select,
@@ -34495,7 +34495,7 @@ button.cal-view-btn {
   border: 1px solid var(--border);
   color: var(--fg);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 14px;
   padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
@@ -34515,7 +34515,7 @@ button.cal-view-btn {
   min-height: 48px;
 }
 .assistant-checkin-prompt:focus { outline: none; border-color: var(--accent, var(--red)); }
-.assistant-checkin-meta { font-size: 10px; opacity: 0.45; }
+.assistant-checkin-meta { font-size: 14px; opacity: 0.45; }
 .assistant-settings-actions {
   display: flex;
   justify-content: flex-end;
@@ -34542,7 +34542,7 @@ button.cal-view-btn {
   align-items: center;
 }
 .assistant-tool-group-label {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   opacity: 0.5;
   text-transform: uppercase;
@@ -34554,7 +34554,7 @@ button.cal-view-btn {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: 14px;
   padding: 2px 6px;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -34700,7 +34700,7 @@ button.cal-event-more:hover { opacity:1 !important; }
    even when the event date you're picking is way off in the future. */
 .cal-form-today {
   text-align: center;
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   opacity: 0.45;
@@ -34915,10 +34915,10 @@ button.cal-btn.cal-btn-danger:hover { background:var(--accent, var(--red)); colo
   }
   .cal-toolbar-right::-webkit-scrollbar { display: none; }
   .cal-title {
-    font-size: 13px;
+    font-size: 14px;
     padding: 0 4px;
   }
-  .cal-nav { padding: 2px 5px; font-size: 10px; }
+  .cal-nav { padding: 2px 5px; font-size: 14px; }
   .cal-view-btn { padding: 2px 5px; font-size: 9px; }
   .cal-filters { gap: 3px; margin-top: 4px; }
   .cal-filter-item { font-size: 9px; padding: 1px 5px; }
@@ -35054,7 +35054,7 @@ body.research-panel-view #research-divider { display:none; }
   opacity:0.5; margin-bottom:2px;
 }
 .research-setting select {
-  font-size: 11px; padding: 4px 6px;
+  font-size: 14px; padding: 4px 6px;
   background: var(--bg);
   color: var(--fg);
   border: 1px solid var(--border); border-radius: 4px;
@@ -35099,7 +35099,7 @@ body.research-panel-view #research-divider { display:none; }
 .research-cat {
   padding: 2px 10px;
   border-radius: 12px;
-  font-size: 10px;
+  font-size: 14px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--fg-muted);
@@ -35149,7 +35149,7 @@ body.research-panel-view #research-divider { display:none; }
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.35);
   padding: 5px;
-  font-size: 13px;
+  font-size: 14px;
   animation: rrm-pop-in 0.12s ease-out both;
   transform-origin: top right;
 }
@@ -35178,7 +35178,7 @@ body.research-panel-view #research-divider { display:none; }
 }
 .research-run-mode-popover .rrm-title {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--fg);
 }
 .research-jobs-list {
@@ -35232,7 +35232,7 @@ body.research-panel-view #research-divider { display:none; }
    green as its left border so the green reads as a labelled category. */
 .research-cat-badge.research-cat-standard { color: var(--color-success); opacity: 0.75; }
 .research-cat-badge {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   text-transform: lowercase;
   letter-spacing: 0;
@@ -35279,7 +35279,7 @@ body.research-panel-view #research-divider { display:none; }
 .research-hero-icon svg { width: 100%; height: 100%; }
 .research-hero-text { flex: 1; min-width: 0; }
 .research-hero-label {
-  font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px;
+  font-size: 14px; text-transform: uppercase; letter-spacing: 1.2px;
   font-weight: 700; opacity: 0.7; margin-bottom: 3px;
   color: var(--cat-color, var(--accent));
 }
@@ -35334,7 +35334,7 @@ body.research-panel-view #research-divider { display:none; }
   position: absolute; left: 10px; top: 14px;
   width: 30px; height: 30px; border-radius: 50%;
   background: #82c882; color: white;
-  font-weight: 700; font-size: 13px;
+  font-weight: 700; font-size: 14px;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 6px color-mix(in srgb, #82c882 40%, transparent);
 }
@@ -35428,7 +35428,7 @@ body.research-panel-view #research-divider { display:none; }
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--fg-muted);
-  font-size: 11px;
+  font-size: 14px;
   font-family: inherit;
   white-space: nowrap;
   cursor: pointer;
@@ -35496,12 +35496,12 @@ body.research-panel-view #research-divider { display:none; }
 /* The top "Research" heading is a plain card-style title — no bar/chevron/dot. */
 .research-main-header {
   cursor: default; background: none; border: none;
-  padding: 6px 2px; font-size: 13px; font-weight: 600;
+  padding: 6px 2px; font-size: 14px; font-weight: 600;
 }
 .research-main-header:hover { background: none; }
 .research-section-count {
   /* Match the panel header's "N research" chip — small, muted, no weight. */
-  font-size: 10px; opacity: 0.6; font-weight: normal;
+  font-size: 14px; opacity: 0.6; font-weight: normal;
   font-variant-numeric: tabular-nums;
 }
 .research-job-error {
@@ -35736,7 +35736,7 @@ input.cp-swatch-input::selection { background: transparent; }
 }
 .cp-eyedropper:hover:not(:disabled) { background: rgba(255,255,255,0.08); }
 .cp-section-label {
-  font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px;
+  font-size: 14px; text-transform: uppercase; letter-spacing: 0.6px;
   opacity: 0.5; margin-top: 10px; margin-bottom: 4px;
 }
 .cp-swatches {
@@ -35752,7 +35752,7 @@ input.cp-swatch-input::selection { background: transparent; }
 }
 .cp-swatch:hover { transform: scale(1.15); }
 .cp-recent-empty {
-  font-size: 11px; opacity: 0.4; padding: 2px 0;
+  font-size: 14px; opacity: 0.4; padding: 2px 0;
 }
 
 /* PDF form export modal + signature modals — match the app theme via the
@@ -36097,7 +36097,7 @@ body.theme-frosted .modal {
 .research-section-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 /* "Clear all" in the Past header — styled like the cookbook-running clear btn. */
 .research-section-clear {
-  font-size: 10px; padding: 0 8px; height: 22px;
+  font-size: 14px; padding: 0 8px; height: 22px;
   border-radius: 6px; border: 1px solid var(--border);
   color: color-mix(in srgb, var(--fg) 45%, transparent);
   background: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
@@ -36149,7 +36149,7 @@ body.theme-frosted .modal {
 .research-job-card.research-job-failed { border-color: color-mix(in srgb, #f44336 40%, var(--border)); }
 .research-cat-badge.research-cat-failed { color: #f44336; display: inline-flex; align-items: center; gap: 3px; }
 .research-cat-badge.research-cat-failed svg { width: 10px; height: 10px; }
-.research-job-failnote { font-size: 11px; color: #f44336; opacity: 0.9; margin: 4px 0 6px; line-height: 1.35; }
+.research-job-failnote { font-size: 14px; color: #f44336; opacity: 0.9; margin: 4px 0 6px; line-height: 1.35; }
 
 /* Shared popup-menu row feedback. Many small menus use their own item class;
    keep the hover light and consistent instead of giving one action a special
@@ -36194,14 +36194,14 @@ body.theme-frosted .modal {
   border: 1px solid var(--border, rgba(255,255,255,0.08));
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--fg, #e6e6e6);
   overflow-y: auto;
   padding: 4px 0;
   display: none;
 }
 .slash-ac-cat {
-  font-size: 10px;
+  font-size: 14px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--fg-muted, #888);
@@ -36237,7 +36237,7 @@ body.theme-frosted .modal {
 .slash-ac-usage {
   color: var(--fg-muted, #888);
   font-family: 'Fira Code', ui-monospace, monospace;
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.55;
   flex-shrink: 0;
 }
@@ -36334,7 +36334,7 @@ body.theme-frosted .modal {
   gap: 8px;
 }
 .adm-copilot-code-label {
-  font-size: 10px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: color-mix(in srgb, var(--fg) 45%, transparent);
@@ -36359,9 +36359,52 @@ body.theme-frosted .modal {
   font-size: 12px;
 }
 .adm-copilot-hint {
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.4;
   color: color-mix(in srgb, var(--fg) 45%, transparent);
+}
+/* ── Workspace picker ───────────────────────────────────────────── */
+/* Layout (width/flex column/max-height) inherited from base .modal-content. */
+/* Editable path/address bar: reuses .styled-prompt-input for border/bg/radius/
+   focus ring (set in the element's class list). Overrides only the deltas:
+   mono font, and full-bleed via flex stretch with no horizontal margin (the
+   modal-content's 10px padding is the gutter) instead of the base width:100%,
+   which overflowed against the overflow:auto scrollbar. */
+.workspace-cur {
+  align-self: stretch;
+  width: auto;
+  min-width: 0;
+  margin: 4px 0 8px;
+  font-family: var(--mono, monospace);
+  font-size: 12px;
+}
+/* flex/overflow inherited from base .modal-body; only the padding differs. */
+.workspace-body { padding: 6px 0; }
+.workspace-row {
+  padding: 7px 18px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.workspace-row > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workspace-row-icon { flex-shrink: 0; opacity: 0.75; }
+.workspace-row:hover {
+  background: color-mix(in srgb, var(--border) 20%, transparent);
+}
+.workspace-up { opacity: 0.7; }
+.workspace-empty { padding: 14px 18px; opacity: 0.5; font-size: 14px; }
+.workspace-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--border);
 }
 /* Cookbook serve panel: Launch + ^ split button pair */
 .hwfit-serve-launch-group {
@@ -36412,7 +36455,7 @@ body.theme-frosted .modal {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   opacity: 0.95;
   flex-wrap: wrap;
@@ -36430,7 +36473,7 @@ body.theme-frosted .modal {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.75;
 }
 .hwfit-schedule-field input[type="time"] {
@@ -36438,7 +36481,7 @@ body.theme-frosted .modal {
   min-width: 90px;
 }
 .hwfit-schedule-label {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.75;
 }
 .hwfit-sched-days {
@@ -36466,7 +36509,7 @@ body.theme-frosted .modal {
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1;
   padding: 0;
   cursor: pointer;
@@ -36518,7 +36561,7 @@ body.theme-frosted .modal {
 .hwfit-sched-err.is-visible { display: block; }
 @media (max-width: 600px) {
   .hwfit-schedule-row { gap: 8px; }
-  .hwfit-sched-day-chip { width: 36px; height: 36px; font-size: 11px; }
+  .hwfit-sched-day-chip { width: 36px; height: 36px; font-size: 14px; }
 }
 
 /* Brief outline flash on a note card when it's the target of a
