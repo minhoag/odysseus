@@ -1,3 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "odysseus"
+version = "1.0.0"
+description = "A self-hosted AI workspace"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
+    "python-dotenv",
+    "httpx",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "SQLAlchemy",
+    "pypdf",
+    "beautifulsoup4",
+    "charset-normalizer",
+    "numpy",
+    "chromadb-client",
+    "fastembed",
+    "youtube-transcript-api",
+    "markdown",
+    "nh3",
+    "icalendar",
+    "python-dateutil",
+    "caldav",
+    "cryptography",
+    "bcrypt",
+    "mcp",
+    "pyotp",
+    "qrcode[pil]",
+    "croniter",
+    "pytest",
+    "pytest-asyncio",
+]
+
+[project.optional-dependencies]
+stt = ["faster-whisper"]
+search = ["duckduckgo-search"]
+pdf = ["PyMuPDF"]
+office = ["markitdown[docx,pptx,xlsx,xls]==0.1.5"]
+all = [
+    "faster-whisper",
+    "duckduckgo-search",
+    "PyMuPDF",
+    "markitdown[docx,pptx,xlsx,xls]==0.1.5",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
