@@ -52,6 +52,9 @@ all = [
     "markitdown[docx,pptx,xlsx,xls]==0.1.5",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["app.py", "core", "routes", "services", "src", "mcp_servers", "scripts", "integrations", "config", "static", "companion"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
