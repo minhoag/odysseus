@@ -328,6 +328,10 @@ class EmailAccount(TimestampMixin, Base):
     # Authentication mode: "password" (default) or "google_oauth"
     auth_type      = Column(String, default="password", nullable=False)
 
+    # Whether this account opts in to Google Calendar sync. Only meaningful
+    # when auth_type == 'google_oauth'; forced False for password accounts.
+    sync_google_calendar = Column(Boolean, default=False, nullable=False)
+
     __table_args__ = (
         Index('ix_email_accounts_owner_default', 'owner', 'is_default'),
     )
@@ -1505,6 +1509,10 @@ class CalendarCal(TimestampMixin, Base):
     # NULL for local calendars and for CalDAV calendars created before
     # multi-account support was added (treated as "use any configured account").
     account_id = Column(String, nullable=True, index=True)
+    # Per-calendar Google sync toggle. Only meaningful when source == "google".
+    # When False, the Google sync skips this calendar's events (but still
+    # discovers it from the CalendarList so the row persists).
+    sync_enabled = Column(Boolean, default=True, nullable=False)
 
     events = relationship("CalendarEvent", back_populates="calendar", cascade="all, delete-orphan")
 
@@ -1666,11 +1674,13 @@ def init_db():
     _migrate_add_assistant_columns()
     _migrate_add_email_smtp_security()
     _migrate_add_email_auth_type()
+    _migrate_add_email_sync_google_calendar()
     _migrate_seed_email_account()
     _migrate_add_calendar_metadata()
     _migrate_add_calendar_is_utc()
     _migrate_add_calendar_origin()
     _migrate_add_calendar_account_id()
+    _migrate_add_calendar_sync_enabled()
     _migrate_chat_messages_fts()
     _migrate_encrypt_email_passwords()
     _migrate_encrypt_signatures()
@@ -1821,6 +1831,30 @@ def _migrate_add_email_auth_type():
         logging.getLogger(__name__).warning(f"auth_type migration skipped: {e}")
 
 
+def _migrate_add_email_sync_google_calendar():
+    """Add sync_google_calendar column to email_accounts."""
+    import sqlite3
+    db_path = DATABASE_URL.replace("sqlite:///", "")
+    if not os.path.exists(db_path):
+        return
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.execute("PRAGMA table_info(email_accounts)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if columns and "sync_google_calendar" not in columns:
+            conn.execute(
+                "ALTER TABLE email_accounts ADD COLUMN sync_google_calendar BOOLEAN "
+                "DEFAULT 0 NOT NULL"
+            )
+            conn.commit()
+            logging.getLogger(__name__).info(
+                "Migrated: added sync_google_calendar column to email_accounts"
+            )
+        conn.close()
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"sync_google_calendar migration skipped: {e}")
+
+
 def _migrate_encrypt_endpoint_keys():
     """Encrypt any plaintext provider API keys in model_endpoints. Idempotent;
     raw SQL so the EncryptedText decorator isn't applied twice."""
@@ -1952,6 +1986,25 @@ def _migrate_add_calendar_origin():
         conn.close()
     except Exception as e:
         logging.getLogger(__name__).warning(f"calendar_events.origin migration failed: {e}")
+
+
+def _migrate_add_calendar_sync_enabled():
+    """Add sync_enabled column to calendars for Google per-calendar sync toggle."""
+    import sqlite3
+    db_path = DATABASE_URL.replace("sqlite:///", "")
+    if not os.path.exists(db_path):
+        return
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.execute("PRAGMA table_info(calendars)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if columns and "sync_enabled" not in columns:
+            conn.execute("ALTER TABLE calendars ADD COLUMN sync_enabled BOOLEAN DEFAULT 1 NOT NULL")
+            conn.commit()
+            logging.getLogger(__name__).info("Migrated: added 'sync_enabled' column to calendars")
+        conn.close()
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"calendars.sync_enabled migration failed: {e}")
 
 
 def _migrate_add_calendar_account_id():

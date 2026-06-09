@@ -844,12 +844,49 @@ def setup_calendar_routes() -> APIRouter:
 
     @router.post("/sync")
     async def sync_caldav_endpoint(request: Request):
-        """Pull events from the configured CalDAV server into local DB.
-        Returns counts + any per-calendar errors. Called by the frontend
+        """Pull events from CalDAV + Google Calendar into local DB.
+        Returns aggregated counts + per-source errors. Called by the frontend
         on calendar open and by the periodic scheduler loop."""
         owner = _require_user(request)
         from src.caldav_sync import sync_caldav
-        return await sync_caldav(owner)
+        caldav_result = await sync_caldav(owner)
+
+        # Google Calendar sync — skip silently when token is not configured
+        # or when the owner has no enabled Google OAuth email account with
+        # sync_google_calendar turned on.
+        google_result = {"calendars": 0, "events": 0, "deleted": 0, "errors": []}
+        _google_sync_enabled = False
+        try:
+            from core.database import SessionLocal as _SL, EmailAccount as _EA
+            _db = _SL()
+            try:
+                _google_sync_enabled = _db.query(_EA).filter(
+                    _EA.owner == owner,
+                    _EA.enabled == True,  # noqa: E712
+                    _EA.auth_type == "google_oauth",
+                    _EA.sync_google_calendar == True,  # noqa: E712
+                ).first() is not None
+            finally:
+                _db.close()
+        except Exception:
+            pass
+        if _google_sync_enabled:
+            try:
+                from src.google_token_service import load_credentials as _google_status
+                if _google_status()["state"] == "valid":
+                    from src.google_calendar_sync import sync_google_calendar
+                    google_result = await sync_google_calendar(owner)
+            except Exception as e:
+                logger.warning("Google calendar sync skipped: %s", e)
+
+        return {
+            "caldav": caldav_result,
+            "google": google_result,
+            "calendars": caldav_result.get("calendars", 0) + google_result.get("calendars", 0),
+            "events": caldav_result.get("events", 0) + google_result.get("events", 0),
+            "deleted": caldav_result.get("deleted", 0) + google_result.get("deleted", 0),
+            "errors": caldav_result.get("errors", []) + google_result.get("errors", []),
+        }
 
     @router.delete("/calendars/{cal_id}")
     async def delete_calendar(cal_id: str, request: Request):
@@ -881,7 +918,13 @@ def setup_calendar_routes() -> APIRouter:
             _ensure_default_calendar(db, owner)
             cals = db.query(CalendarCal).filter(CalendarCal.owner == owner).all()
             return {"calendars": [
-                {"name": c.name, "href": c.id, "color": c.color, "source": c.source}
+                {
+                    "name": c.name,
+                    "href": c.id,
+                    "color": c.color,
+                    "source": c.source,
+                    "sync_enabled": bool(getattr(c, "sync_enabled", True)),
+                }
                 for c in cals
             ]}
         except HTTPException:
@@ -889,6 +932,47 @@ def setup_calendar_routes() -> APIRouter:
         except Exception as e:
             logger.error("Failed to list calendars: %s", e)
             raise HTTPException(500, "Failed to list calendars")
+        finally:
+            db.close()
+
+    @router.patch("/calendars/{cal_id}/sync")
+    async def set_calendar_sync(request: Request, cal_id: str):
+        """Toggle sync_enabled for a Google calendar. Non-Google calendars
+        return 400 — their sync is controlled elsewhere (CalDAV config)."""
+        owner = _require_user(request)
+        try:
+            body = await request.json()
+        except Exception:
+            raise HTTPException(400, "JSON body required")
+        sync_enabled = body.get("sync_enabled")
+        # Strict: must be a JSON boolean (true/false), not a string or number.
+        if not isinstance(sync_enabled, bool):
+            raise HTTPException(400, "sync_enabled must be a boolean (true/false)")
+
+        db = SessionLocal()
+        try:
+            cal = _get_or_404_calendar(db, cal_id, owner)
+            if cal.source != "google":
+                raise HTTPException(400, "Sync toggle only applies to Google calendars")
+            cal.sync_enabled = sync_enabled
+
+            # When disabling sync, purge stale Google-origin events for this
+            # calendar so the UI doesn't keep showing orphaned rows. This runs
+            # in the same transaction as the flag update so both land atomically.
+            if not sync_enabled:
+                db.query(CalendarEvent).filter(
+                    CalendarEvent.calendar_id == cal_id,
+                    CalendarEvent.origin == "google",
+                ).delete()
+
+            db.commit()
+            return {"ok": True, "sync_enabled": cal.sync_enabled}
+        except HTTPException:
+            raise
+        except Exception as e:
+            db.rollback()
+            logger.error("Failed to update sync_enabled for calendar %s: %s", cal_id, e)
+            raise HTTPException(500, "Failed to update sync setting")
         finally:
             db.close()
 
@@ -973,6 +1057,11 @@ def setup_calendar_routes() -> APIRouter:
                 # `_get_or_404_calendar`.
                 if cal and (cal.owner is None or cal.owner != owner):
                     raise HTTPException(404, "Calendar not found")
+                # Cannot create events on a Google calendar whose sync is
+                # disabled — the row would orphan (no writeback to Google) and
+                # be wiped on the next toggle.
+                if cal and cal.source == "google" and not cal.sync_enabled:
+                    raise HTTPException(400, "Cannot create events on a sync-disabled Google calendar")
             if not cal:
                 cal = _ensure_default_calendar(db, owner)
 
@@ -1004,6 +1093,15 @@ def setup_calendar_routes() -> APIRouter:
                 rrule=data.rrule or "",
                 color=data.color or None,
             )
+            if cal.source == "google" and cal.sync_enabled:
+                # Push to Google FIRST to get the authoritative event ID,
+                # then use it as our local uid so subsequent updates/deletes
+                # hit the right remote object.
+                from src.google_calendar_writeback import create_google_event
+                google_id = await create_google_event(cal.account_id, ev)
+                uid = f"google-{google_id}"
+                ev.uid = uid
+                ev.origin = "google"
             db.add(ev)
             db.commit()
             if cal.source == "caldav":
@@ -1070,6 +1168,9 @@ def setup_calendar_routes() -> APIRouter:
                     "location": ev.location, "dtstart": ev.dtstart, "dtend": ev.dtend,
                     "all_day": ev.all_day, "is_utc": ev.is_utc, "rrule": ev.rrule or "",
                 })
+            if cal and cal.source == "google" and cal.sync_enabled:
+                from src.google_calendar_writeback import update_google_event
+                await update_google_event(cal.account_id, ev.uid, ev)
             return {"ok": True}
         except HTTPException:
             raise
@@ -1093,7 +1194,13 @@ def setup_calendar_routes() -> APIRouter:
             # Capture what the remote push needs BEFORE the row is gone.
             _cal = db.query(CalendarCal).filter(CalendarCal.id == ev.calendar_id).first()
             _is_caldav = bool(_cal and _cal.source == "caldav")
+            _is_google = bool(_cal and _cal.source == "google" and _cal.sync_enabled)
             _cal_id, _ev_uid = ev.calendar_id, ev.uid
+            if _is_google:
+                # Delete from Google first so a remote failure keeps the local
+                # row intact (no ghost rows).
+                from src.google_calendar_writeback import delete_google_event
+                await delete_google_event(_cal.account_id, _ev_uid)
             db.delete(ev)
             db.commit()
             if _is_caldav:

@@ -264,3 +264,61 @@ class TestLoadWithWebCredentials:
         mock_load.return_value = fake_creds
         token = gts.get_access_token()
         assert token == "valid_access_token"
+
+
+# ---------------------------------------------------------------------------
+# _load_google_credentials — must handle scopes correctly
+# ---------------------------------------------------------------------------
+
+class TestLoadGoogleCredentials:
+    def test_malformed_scopes_object_rejected(self, oauth_dir):
+        """Token with scopes as object (not list) must be rejected."""
+        credentials_info = {
+            "client_id": "cid",
+            "client_secret": "cs",
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+        token_data = {
+            "token": "access",
+            "refresh_token": "refresh",
+            "scopes": {  # Bad: object instead of list
+                "client_id": "cid",
+                "project_id": "proj",
+                "redirect_uris": ["http://localhost"],
+            },
+        }
+        with pytest.raises(gts.TokenLoadError, match="malformed.*scopes"):
+            gts._load_google_credentials(credentials_info, token_data)
+
+    def test_merges_client_metadata_from_credentials(self, oauth_dir):
+        """Token missing client_id/client_secret gets them from credentials.json."""
+        credentials_info = {
+            "client_id": "from_creds",
+            "client_secret": "secret_from_creds",
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+        token_data = {
+            "token": "access",
+            "refresh_token": "refresh",
+        }
+        # Should not raise - the merge should work
+        creds = gts._load_google_credentials(credentials_info, token_data)
+        # Verify the credentials object was created with merged info
+        assert creds.client_id == "from_creds"
+        assert creds.client_secret == "secret_from_creds"
+
+    def test_token_with_valid_scopes_list(self, oauth_dir):
+        """Token with scopes as list of strings must be accepted."""
+        credentials_info = {
+            "client_id": "cid",
+            "client_secret": "cs",
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+        token_data = {
+            "token": "access",
+            "refresh_token": "refresh",
+            "scopes": ["https://www.googleapis.com/auth/calendar"],
+        }
+        # Should not raise
+        creds = gts._load_google_credentials(credentials_info, token_data)
+        assert creds is not None

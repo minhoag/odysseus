@@ -2962,6 +2962,7 @@ def setup_email_routes():
                     "has_imap_password": bool(r.imap_password),
                     "has_smtp_password": bool(r.smtp_password),
                     "auth_type": r.auth_type or "password",
+                    "sync_google_calendar": bool(r.sync_google_calendar),
                 })
             return {"accounts": out}
         finally:
@@ -2995,6 +2996,7 @@ def setup_email_routes():
                 smtp_password=_enc(data.get("smtp_password") or ""),
                 from_address=(data.get("from_address") or "").strip(),
                 auth_type=data.get("auth_type") or "password",
+                sync_google_calendar=bool(data.get("sync_google_calendar", False)),
                 # SECURITY: stamp the creator so all subsequent reads / mutations
                 # can filter by user. Without this every new account leaks to
                 # every other user.
@@ -3039,6 +3041,10 @@ def setup_email_routes():
                 row.smtp_security = _smtp_security_mode({"smtp_security": data.get("smtp_security"), "smtp_port": data.get("smtp_port") or row.smtp_port})
             if "auth_type" in data:
                 row.auth_type = data["auth_type"] or "password"
+            if "sync_google_calendar" in data:
+                row.sync_google_calendar = bool(data["sync_google_calendar"])
+            if row.auth_type == "password":
+                row.sync_google_calendar = False
             for key in ("imap_starttls", "enabled"):
                 if key in data:
                     setattr(row, key, bool(data[key]))

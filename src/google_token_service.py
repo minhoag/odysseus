@@ -88,8 +88,29 @@ def _read_token() -> dict:
 
 
 def _load_google_credentials(credentials_info: dict, token_data: dict) -> Credentials:
+    """Build authorized-user info from token + credentials metadata and load.
+
+    Merges token_data with client metadata from credentials_info (client_id,
+    client_secret, token_uri) if those fields are missing from token_data.
+    Always uses GOOGLE_OAUTH_SCOPES for scopes.
+    """
+    # Validate scopes in token_data if present - must be a list of strings
+    if "scopes" in token_data and not isinstance(token_data["scopes"], list):
+        raise TokenLoadError(
+            "token.json has malformed 'scopes' field (expected list of strings); "
+            "delete token.json and re-authorize"
+        )
+
+    # Build the authorized-user info dict
+    info = dict(token_data)
+
+    # Merge in client metadata from credentials_info if missing
+    for key in ("client_id", "client_secret", "token_uri"):
+        if key not in info and key in credentials_info:
+            info[key] = credentials_info[key]
+
     try:
-        return Credentials.from_authorized_user_info(token_data, credentials_info)
+        return Credentials.from_authorized_user_info(info, scopes=GOOGLE_OAUTH_SCOPES)
     except (ValueError, KeyError) as e:
         raise TokenLoadError(f"failed to load Google credentials: {e}")
 

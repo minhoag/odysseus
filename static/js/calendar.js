@@ -58,6 +58,19 @@ let _fetchedRanges = [];
 let _calendars = [];
 let _hiddenCals = new Set();
 let _hiddenTypes = new Set();   // event_type values to hide
+
+// Persist the View toggle (hidden calendars) to localStorage.
+const LS_HIDDEN_CALS_KEY = 'odysseus-cal-hidden';
+function _saveHiddenCals() {
+  try { localStorage.setItem(LS_HIDDEN_CALS_KEY, JSON.stringify([..._hiddenCals])); } catch {}
+}
+function _loadHiddenCals() {
+  try {
+    const raw = localStorage.getItem(LS_HIDDEN_CALS_KEY);
+    if (raw) _hiddenCals = new Set(JSON.parse(raw));
+  } catch {}
+}
+_loadHiddenCals();
 // "Only important" filter — when true, only events with importance
 // high/critical render, regardless of their category. Toggled via the "!"
 // chip; orthogonal to _hiddenTypes (which deals with event_type categories).
@@ -2265,6 +2278,7 @@ function _wireAll(body) {
           allHrefs.forEach(h => { if (h !== href) _hiddenCals.add(h); });
         }
       }
+      _saveHiddenCals();
     } else if (type) {
       // "!" chip toggles a separate "only important" axis — clicking it
       // doesn't solo-hide other categories the way a normal type chip does.
@@ -2437,13 +2451,35 @@ async function _showCalSettings() {
         <div>
           <div style="font-size:11px;opacity:0.5;margin-bottom:6px;">Your calendars</div>
           <div id="cal-settings-list" style="display:flex;flex-direction:column;gap:4px;">
-            ${cals.map(c => `
+            ${cals.map(c => {
+              const isGoogle = c.source === 'google';
+              const isCaldav = c.source === 'caldav';
+              const isLocal = c.source === 'local' || !c.source;
+              const srcBadge = isGoogle
+                ? '<span class="cal-src-badge" style="font-size:9px;padding:1px 5px;border-radius:4px;background:#4285f4;color:#fff;font-weight:600;letter-spacing:0.3px;">Google</span>'
+                : isCaldav
+                ? '<span class="cal-src-badge" style="font-size:9px;padding:1px 5px;border-radius:4px;background:var(--border);color:var(--fg);font-weight:600;">CalDAV</span>'
+                : '<span class="cal-src-badge" style="font-size:9px;padding:1px 5px;border-radius:4px;background:var(--border);color:var(--fg);font-weight:600;">Local</span>';
+              const viewOff = _hiddenCals.has(c.href);
+              const syncOff = isGoogle ? !c.sync_enabled : false;
+              return `
               <div class="cal-settings-row" data-id="${_e(c.href)}" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:color-mix(in srgb, var(--fg) 4%, transparent);">
                 <input type="color" value="${c.color || '#5b8abf'}" class="cal-s-color" style="width:24px;height:24px;border:none;background:none;cursor:pointer;padding:0;border-radius:50%;overflow:hidden;" />
                 <input type="text" value="${_e(c.name)}" class="cal-s-name" style="flex:1;background:none;border:1px solid var(--border);border-radius:4px;padding:3px 6px;color:var(--fg);font-size:12px;" />
+                ${srcBadge}
+                <label class="cal-s-toggle" title="View" style="display:flex;align-items:center;gap:2px;font-size:10px;opacity:0.8;cursor:pointer;">
+                  <input type="checkbox" class="cal-s-view" ${viewOff ? '' : 'checked'} style="cursor:pointer;" />
+                  <span style="user-select:none;">View</span>
+                </label>
+                ${isGoogle ? `
+                <label class="cal-s-toggle" title="Sync events from Google" style="display:flex;align-items:center;gap:2px;font-size:10px;opacity:0.8;cursor:pointer;">
+                  <input type="checkbox" class="cal-s-sync" ${syncOff ? '' : 'checked'} style="cursor:pointer;" />
+                  <span style="user-select:none;">Sync</span>
+                </label>
+                ` : `<span style="font-size:10px;opacity:0.3;width:42px;text-align:center;">—</span>`}
                 <button class="cal-s-del" title="Delete calendar" style="background:none;border:none;color:var(--accent, var(--red));opacity:0.75;cursor:pointer;padding:2px;display:flex;position:relative;top:4px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
               </div>
-            `).join('')}
+            `}).join('')}
           </div>
           <button class="memory-toolbar-btn" id="cal-settings-add" style="margin-top:8px;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent, var(--red))" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -2529,6 +2565,60 @@ async function _showCalSettings() {
     const colorInput = row.querySelector('.cal-s-color');
     const nameInput = row.querySelector('.cal-s-name');
     const delBtn = row.querySelector('.cal-s-del');
+    const viewToggle = row.querySelector('.cal-s-view');
+    const syncToggle = row.querySelector('.cal-s-sync');
+
+    // View toggle — flips the calendar's visibility via _hiddenCals and persists.
+    if (viewToggle) {
+      viewToggle.addEventListener('change', () => {
+        if (viewToggle.checked) {
+          _hiddenCals.delete(id);
+        } else {
+          _hiddenCals.add(id);
+        }
+        _saveHiddenCals();
+        _render();
+      });
+    }
+
+    // Sync toggle — calls PATCH endpoint for Google calendars, then refreshes.
+    if (syncToggle) {
+      syncToggle.addEventListener('change', async () => {
+        syncToggle.disabled = true;
+        const newVal = syncToggle.checked;
+        try {
+          const r = await fetch(`${API_BASE}/api/calendar/calendars/${id}/sync`, {
+            method: 'PATCH', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sync_enabled: newVal }),
+          });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(d.detail || d.error || 'Failed');
+          const c = _calendars.find(x => x.href === id);
+          if (c) c.sync_enabled = newVal;
+          // Drop cached events for BOTH directions: disable purged rows on
+          // the server, enable brings fresh rows back after re-sync.
+          _allEvents = {}; _fetchedRanges = [];
+          try { localStorage.removeItem(LS_KEY); } catch (_) {}
+          // Re-fetch calendars then trigger sync and refetch so events
+          // reappear (enable) or stay empty (disable) without a page reload.
+          await _fetchCalendars();
+          await _syncCaldav(true);
+          await _fetchCalendars();
+          // Force a fresh events fetch for the visible range.
+          const range = (_view === 'year')
+            ? [`${_currentDate.getFullYear()}-01-01`, `${_currentDate.getFullYear() + 1}-01-01`]
+            : (_view === 'week') ? _weekRange(_currentDate) : _monthRange(_currentDate);
+          await _fetchEvents(range[0], range[1], /*force*/ true);
+          _render();
+          if (uiModule?.showToast) uiModule.showToast(newVal ? 'Sync enabled' : 'Sync disabled — events removed');
+        } catch (err) {
+          syncToggle.checked = !newVal; // revert on failure
+          if (uiModule?.showError) uiModule.showError('Sync toggle failed: ' + (err.message || err));
+        }
+        syncToggle.disabled = false;
+      });
+    }
 
     let saveTimer;
     const save = () => {
@@ -2687,9 +2777,23 @@ function _showEventForm(existing, defaultDate, defaultEndDate) {
   // Default to all-day when dragging across multiple days
   const ad = existing ? existing.all_day : (defaultEndDate && defaultEndDate !== defaultDate);
 
-  let calOpts = _calendars.filter(c => !_hiddenCals.has(c.href)).map(c =>
-    `<option value="${_e(c.href)}" ${existing && existing.calendar_href === c.href ? 'selected' : ''}>${_e(c.name)}</option>`
+  // Don't offer Google calendars with sync disabled for new event creation
+  // — writing events to them would bypass Google writeback and leave orphan
+  // rows. When editing, always include the current calendar so the user can
+  // keep the event where it is (even if that calendar is now hidden or has
+  // sync disabled) — edits to existing events on disabled Google calendars
+  // stay local-only and that's an acceptable state for pre-existing rows.
+  const _calOptsList = _calendars.filter(c => {
+    // Edit mode: always include the current event's calendar.
+    if (existing && existing.calendar_href === c.href) return true;
+    if (_hiddenCals.has(c.href)) return false;
+    if (c.source === 'google' && !c.sync_enabled) return false;
+    return true;
+  });
+  let calOpts = _calOptsList.map(c =>
+    `<option value="${_e(c.href)}" ${existing && existing.calendar_href === c.href ? 'selected' : ''}>${_e(c.name)}${c.source === 'google' && !c.sync_enabled && !(existing && existing.calendar_href === c.href) ? ' (sync off)' : ''}</option>`
   ).join('');
+  const _canCreateCal = isEdit || _calOptsList.some(c => !(c.source === 'google' && !c.sync_enabled));
 
   // "Bespoke" event form: a big clock-face hero (time + date) and a single
   // title input. Everything else (location, description, recurrence,
@@ -2978,6 +3082,16 @@ function _showEventForm(existing, defaultDate, defaultEndDate) {
   const _cancelEventForm = () => _render();
   document.getElementById('cal-f-cancel')?.addEventListener('click', _cancelEventForm);
   document.getElementById('cal-form-mobile-cancel')?.addEventListener('click', _cancelEventForm);
+  // Disable save when creating and no writable calendar is available —
+  // prevents silently targeting a sync-disabled Google calendar via fallback.
+  if (!isEdit && !_canCreateCal) {
+    const _saveBtn = body.querySelector('#cal-f-save');
+    if (_saveBtn) {
+      _saveBtn.disabled = true;
+      _saveBtn.title = 'No writable calendar available (enable sync on a Google calendar first)';
+      _saveBtn.style.opacity = '0.5';
+    }
+  }
   document.getElementById('cal-f-save')?.addEventListener('click', async () => {
     const summary = document.getElementById('cal-f-sum').value.trim();
     if (!summary) { uiModule.showToast('Title required'); return; }
@@ -3007,6 +3121,18 @@ function _showEventForm(existing, defaultDate, defaultEndDate) {
     // proper UTC instants (is_utc=True). Without this, naive "10:00" gets
     // re-interpreted as local elsewhere — the timezone-misfire bug.
     const _tz = _tzOffset();
+    // Resolve target calendar: explicit from the select, or first writable
+    // calendar from the already-filtered options list. Never fall through
+    // to _calendars[0] since that can be a sync-disabled Google calendar.
+    const _pickedCalHref = document.getElementById('cal-f-cal')?.value;
+    const _fallbackCalHref = (_calOptsList[0] && _calOptsList[0].href) || '';
+    const calendar_href = _pickedCalHref || _fallbackCalHref;
+    // Final guard: refuse to submit to a sync-disabled Google calendar.
+    const _targetCal = _calendars.find(c => c.href === calendar_href);
+    if (!isEdit && _targetCal && _targetCal.source === 'google' && !_targetCal.sync_enabled) {
+      if (uiModule?.showToast) uiModule.showToast('Cannot create events on a sync-disabled Google calendar');
+      return;
+    }
     const payload = {
       summary,
       dtstart: isAD ? dv : `${dv}T${document.getElementById('cal-f-start').value}:00${_tz}`,
@@ -3015,7 +3141,7 @@ function _showEventForm(existing, defaultDate, defaultEndDate) {
       description: document.getElementById('cal-f-desc').value,
       location: document.getElementById('cal-f-loc').value,
       rrule: document.getElementById('cal-f-rrule').value || undefined,
-      calendar_href: document.getElementById('cal-f-cal')?.value || (_calendars[0]?.href || ''),
+      calendar_href,
       color: colorVal || undefined,
     };
     try {
@@ -3237,8 +3363,9 @@ function _locHTML(loc) {
 let _wheelDebounce = 0;
 function _wheelNav(e) {
   if (!_open) return;
-  // Don't intercept scroll inside the day-detail panel or any other inner scroll area
-  if (e.target.closest('.cal-day-detail') || e.target.closest('.cal-form')) return;
+  // Don't intercept scroll inside the day-detail panel, any other inner scroll area,
+  // or the week view hour grid (so vertical scroll stays normal there).
+  if (e.target.closest('.cal-day-detail') || e.target.closest('.cal-form') || e.target.closest('.cal-wk-wrap')) return;
   const body = document.getElementById('cal-body');
   if (!body) return;
   const now = Date.now();

@@ -2749,6 +2749,10 @@ async function initEmailAccountsSettings() {
             <span id="eaf-google-status" style="flex:1;min-width:0;">Loading status…</span>
             <button type="button" id="eaf-google-authorize" class="admin-btn-sm" style="background:var(--red);border-color:var(--red);color:#fff;display:inline-flex;align-items:center;gap:5px;font-weight:600;">Authorize Google</button>
           </div>
+          <label style="display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer;font-size:11px;">
+            <input type="checkbox" id="eaf-sync-google-calendar">
+            <span>Sync Google Calendar</span>
+          </label>
         </div>
         <div class="settings-row"><label class="settings-label">Name${_hint('Optional label for this account (e.g. “Work” or “Personal”). Leave blank to use the email address.')}</label><input id="eaf-name" class="settings-input" placeholder="(optional — leave blank to use email)" value="${esc(a.name || '')}"></div>
         <div class="settings-row"><label class="settings-label">Email${_hint('Your email address. Used as the From: header on outgoing mail and as the display label when Name is blank.')}</label><input id="eaf-from" class="settings-input" placeholder="you@example.com" value="${esc(a.from_address || '')}"></div>
@@ -2869,6 +2873,8 @@ async function initEmailAccountsSettings() {
       // Prefill from the existing account's auth_type (edit mode).
       if (isEdit && a.auth_type) eafAuthSel.value = a.auth_type;
     }
+    const eafSyncChk = el('eaf-sync-google-calendar');
+    if (eafSyncChk && isEdit) eafSyncChk.checked = !!a.sync_google_calendar;
     const eafAuthBtn = el('eaf-google-authorize');
     if (eafAuthBtn) {
       eafAuthBtn.addEventListener('click', () => {
@@ -2897,6 +2903,7 @@ async function initEmailAccountsSettings() {
         smtp_port: parseInt(el('eaf-smtp-port').value) || 465,
         smtp_security: el('eaf-smtp-security').value,
         smtp_user: el('eaf-smtp-user').value.trim(),
+        sync_google_calendar: el('eaf-sync-google-calendar').checked && el('eaf-auth-type').value === 'google_oauth',
       };
       if (el('eaf-imap-pass').value) body.imap_password = el('eaf-imap-pass').value;
       if (el('eaf-smtp-pass').value) body.smtp_password = el('eaf-smtp-pass').value;
@@ -4166,6 +4173,10 @@ async function initUnifiedIntegrations() {
               <span id="uf-email-google-status" style="flex:1;min-width:0;">Loading status…</span>
               <button type="button" id="uf-email-google-authorize" class="admin-btn-sm" style="background:var(--red);border-color:var(--red);color:#fff;display:inline-flex;align-items:center;gap:5px;font-weight:600;">Authorize Google</button>
             </div>
+            <label style="display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer;font-size:11px;">
+              <input type="checkbox" id="uf-email-sync-google-calendar">
+              <span>Sync Google Calendar</span>
+            </label>
           </div>
           <div class="settings-row"><label class="settings-label">Name${_hint('Optional label for this account (e.g. “Work” or “Personal”). Leave blank to use the email address.')}</label><input id="uf-email-name" class="settings-input" placeholder="(optional — leave blank to use email)"></div>
           <div class="settings-row"><label class="settings-label">Email${_hint('Your email address. Used as the From: header on outgoing mail and as the display label when Name is blank.')}</label><input id="uf-email-from" class="settings-input" placeholder="you@example.com"></div>
@@ -4456,6 +4467,8 @@ async function initUnifiedIntegrations() {
       el('uf-smtp-security').value = _smtpSecurity(existing);
       el('uf-smtp-user').value = existing.smtp_user || '';
       el('uf-email-default').checked = !!existing.is_default;
+      const ufSyncChk = el('uf-email-sync-google-calendar');
+      if (ufSyncChk) ufSyncChk.checked = !!existing.sync_google_calendar;
       // If the saved SMTP user matches the IMAP user, keep the "Same as
       // IMAP" toggle ON (and stay hidden). Otherwise turn it off so the
       // separate SMTP credentials are visible for editing.
@@ -4507,6 +4520,7 @@ async function initUnifiedIntegrations() {
         smtp_security: el('uf-smtp-security').value,
         smtp_user: el('uf-smtp-user').value.trim(),
         is_default: el('uf-email-default').checked,
+        sync_google_calendar: el('uf-email-sync-google-calendar').checked && el('uf-email-auth-type').value === 'google_oauth',
       };
       if (el('uf-imap-pass').value) body.imap_password = el('uf-imap-pass').value;
       if (el('uf-smtp-pass').value) body.smtp_password = el('uf-smtp-pass').value;

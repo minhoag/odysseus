@@ -2291,6 +2291,13 @@ async def do_manage_calendar(content: str, owner: Optional[str] = None) -> Dict:
                     cal = (_calendar_query()
                            .filter(CalendarCal.id.like(f"{cal_href}%"))
                            .first())
+                # Cannot create on a sync-disabled Google calendar — would
+                # orphan (no writeback) and get purged on the next toggle.
+                if cal and cal.source == "google" and not cal.sync_enabled:
+                    return {
+                        "error": f"Calendar '{cal.name}' has Google sync disabled. Enable sync before creating events, or choose a different calendar.",
+                        "exit_code": 1,
+                    }
             if not cal:
                 cal = _ensure_default_calendar(db, owner)
 
@@ -2390,6 +2397,12 @@ async def do_manage_calendar(content: str, owner: Optional[str] = None) -> Dict:
                 event_type=event_type,
                 importance=importance,
             )
+            if cal.source == "google" and cal.sync_enabled:
+                from src.google_calendar_writeback import create_google_event
+                google_id = await create_google_event(cal.account_id, ev)
+                uid = f"google-{google_id}"
+                ev.uid = uid
+                ev.origin = "google"
             db.add(ev)
             reminder_note_id = None
             reminder_skipped_reason = None
@@ -2461,6 +2474,10 @@ async def do_manage_calendar(content: str, owner: Optional[str] = None) -> Dict:
             if args.get("importance") is not None:
                 ev.importance = args["importance"]
             db.commit()
+            cal = db.query(CalendarCal).filter(CalendarCal.id == ev.calendar_id).first()
+            if cal and cal.source == "google" and cal.sync_enabled:
+                from src.google_calendar_writeback import update_google_event
+                await update_google_event(cal.account_id, ev.uid, ev)
             return {"response": f"Updated event {uid}", "exit_code": 0}
 
         elif action == "delete_event":
@@ -2474,6 +2491,10 @@ async def do_manage_calendar(content: str, owner: Optional[str] = None) -> Dict:
             ev = _event_query().filter(CalendarEvent.uid == base_uid).first()
             if not ev:
                 return {"error": f"Event {uid} not found", "exit_code": 1}
+            cal = db.query(CalendarCal).filter(CalendarCal.id == ev.calendar_id).first()
+            if cal and cal.source == "google" and cal.sync_enabled:
+                from src.google_calendar_writeback import delete_google_event
+                await delete_google_event(cal.account_id, ev.uid)
             db.delete(ev)
             db.commit()
             return {"response": f"Deleted event {uid}", "exit_code": 0}
