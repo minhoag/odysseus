@@ -1780,6 +1780,8 @@ async def stream_agent_loop(
     if not guide_only and not _relevant_tools and bool(_intent.get("low_signal")):
         from src.tool_index import ALWAYS_AVAILABLE
         _relevant_tools = set(ALWAYS_AVAILABLE)
+        if "bash" not in disabled_tools:
+            _relevant_tools.add("bash")
         logger.info("[tool-rag] Low-signal agent message; skipping retrieval and using always-available tools only")
     if not guide_only and not _relevant_tools:
         try:
@@ -1857,12 +1859,6 @@ async def stream_agent_loop(
 
     if _relevant_tools is not None:
         logger.info("[agent-intent] selected_tools=%s", sorted(_relevant_tools)[:50])
-        logger.info(
-            "[agent-intent] shell_exposed=%s disabled=%s domains=%s",
-            "bash" in _relevant_tools,
-            "bash" in disabled_tools,
-            sorted(_intent.get("domains") or []),
-        )
 
     prep_timings["tool_selection"] = time.time() - _t1
 
@@ -2166,13 +2162,6 @@ async def stream_agent_loop(
 
         _tool_names_sent = [t.get("function", {}).get("name") for t in (all_tool_schemas or []) if t.get("function")]
         logger.info(f"[agent-debug] round={round_num} model={model} _is_api_model={_is_api_model} tools_sent={len(_tool_names_sent)} tool_names={_tool_names_sent[:15]} relevant_tools={sorted(_relevant_tools)[:15] if _relevant_tools else 'ALL'}")
-        logger.info(
-            "[agent-debug] shell_schema_sent=%s disabled=%s force_answer=%s api_model=%s",
-            "bash" in _tool_names_sent,
-            "bash" in disabled_tools,
-            bool(_force_answer),
-            bool(_is_api_model),
-        )
 
         # Primary target + any configured fallback models. stream_llm_with_fallback
         # only switches on a pre-content failure, so streamed output is never
