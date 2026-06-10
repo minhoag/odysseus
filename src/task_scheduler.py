@@ -1356,13 +1356,15 @@ class TaskScheduler:
 
         # Compute tool filter from CrewMember.enabled_tools if set
         disabled_tools = None
+        enabled_tools = set()
         if crew and crew.enabled_tools:
             try:
                 enabled = json.loads(crew.enabled_tools)
                 if isinstance(enabled, list) and enabled:
+                    enabled_tools = set(enabled)
                     from src.tool_index import BUILTIN_TOOL_DESCRIPTIONS
                     all_tools = set(BUILTIN_TOOL_DESCRIPTIONS.keys())
-                    disabled_tools = all_tools - set(enabled)
+                    disabled_tools = all_tools - enabled_tools
             except Exception:
                 pass
 
@@ -1375,6 +1377,10 @@ class TaskScheduler:
             if tool_idx:
                 rag_tools = tool_idx.get_tools_for_query(task.prompt or "", k=8)
                 relevant_tools = (rag_tools | ASSISTANT_ALWAYS_AVAILABLE)
+                # RAG can miss execution tools on short/vague assistant tasks.
+                # If the user explicitly enabled shell scripting for this crew
+                # member, keep it exposed without broadening to every enabled tool.
+                relevant_tools |= (enabled_tools & {"bash"})
                 if disabled_tools:
                     relevant_tools -= disabled_tools
                 logger.info(f"[assistant] RAG selected {len(rag_tools)} tools + {len(ASSISTANT_ALWAYS_AVAILABLE)} always-available = {len(relevant_tools)} total for '{task.name}'")
