@@ -787,7 +787,7 @@ def _classify_agent_request(messages: List[Dict], last_user: str) -> Dict[str, o
         domains.add("ui")
     if has(r"\b(session|chat history|rename chat|delete chat|archive chat|fork chat|list chats)\b"):
         domains.add("sessions")
-    if has(r"\b(file|folder|directory|repo|git|grep|find in files|read file|edit file|shell|terminal|bash|python)\b"):
+    if has(r"\b(file|folder|directory|repo|git|grep|find in files|read file|edit file|shell|terminal|bash|python|mysql|mariadb|postgres|postgresql|psql|sqlite|database|db)\b"):
         domains.add("files")
     if has(r"\b(endpoint|api token|mcp|webhook|preference|configure|config|setting)\b"):
         domains.add("settings")
@@ -1795,6 +1795,8 @@ async def stream_agent_loop(
     if not guide_only and not _relevant_tools and bool(_intent.get("low_signal")):
         from src.tool_index import ALWAYS_AVAILABLE
         _relevant_tools = set(ALWAYS_AVAILABLE)
+        if "bash" not in disabled_tools:
+            _relevant_tools.add("bash")
         logger.info("[tool-rag] Low-signal agent message; skipping retrieval and using always-available tools only")
     if not guide_only and not _relevant_tools:
         try:
