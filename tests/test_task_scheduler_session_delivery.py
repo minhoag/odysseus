@@ -1,5 +1,6 @@
 """Regression tests for task-result delivery into chat sessions (issue #326)."""
 import asyncio
+import json
 import sys
 import types as _types
 
@@ -52,6 +53,28 @@ def _make_task():
     )
 
 
+class _FilterableCrewQuery:
+    def __init__(self, crew):
+        self._crew = crew
+
+    def filter(self, *args, **kwargs):
+        return self
+
+    def first(self):
+        return self._crew
+
+
+class _SchedulerDbStub:
+    def __init__(self, crew):
+        self._crew = crew
+
+    def query(self, model):
+        name = getattr(model, "__name__", "")
+        if name == "CrewMember":
+            return _FilterableCrewQuery(self._crew)
+        raise AssertionError(f"unexpected query for {model!r}")
+
+
 def test_session_delivery_survives_empty_database(monkeypatch):
     """On a fresh/wiped database there is no session to inherit endpoint/model
     from, so _resolve_defaults returns None. The delivery must still persist a
@@ -71,3 +94,86 @@ def test_session_delivery_survives_empty_database(monkeypatch):
     assert len(sessions) == 1
     assert sessions[0].endpoint_url == ""
     assert sessions[0].model == ""
+
+
+def test_session_delivery_uses_in_memory_messages_with_manager(monkeypatch):
+    """Manager delivery must not construct the SQLAlchemy ChatMessage model."""
+    monkeypatch.setitem(sys.modules, "core.database", cdb)
+    parent = sys.modules.get("core")
+    if parent is not None:
+        monkeypatch.setattr(parent, "database", cdb, raising=False)
+
+    class RecordingManager:
+        def __init__(self):
+            self.messages = []
+
+        def add_message(self, session_id, message):
+            assert isinstance(message, MemChatMessage)
+            self.messages.append((session_id, message))
+
+    db = _make_db()
+    manager = RecordingManager()
+    scheduler = TaskScheduler.__new__(TaskScheduler)
+    scheduler._session_manager = manager
+    task = _make_task()
+    task.session_id = "existing-session"
+    task.endpoint_url = "http://endpoint"
+    task.model = "test-model"
+
+    asyncio.run(scheduler._deliver_task_result(task, "done", db))
+
+    assert [message.role for _, message in manager.messages] == [
+        "user",
+        "assistant",
+    ]
+    assert [message.content for _, message in manager.messages] == [
+        "tidy",
+        "done",
+    ]
+    assert all(session_id == "existing-session" for session_id, _ in manager.messages)
+    assert all(
+        message.metadata == {"model": "test-model"}
+        for _, message in manager.messages
+    )
+
+
+def test_enabled_shell_is_exposed_when_tool_rag_does_not_select_it(monkeypatch):
+    """Enabling shell for a crew member must expose the bash schema even when
+    the assistant task's prompt does not retrieve bash from tool RAG."""
+    monkeypatch.setitem(sys.modules, "core.database", cdb)
+    parent = sys.modules.get("core")
+    if parent is not None:
+        monkeypatch.setattr(parent, "database", cdb, raising=False)
+
+    crew = _types.SimpleNamespace(
+        endpoint_url="http://endpoint",
+        model="test-model",
+        enabled_tools=json.dumps(["bash", "read_file"]),
+        is_default_assistant=False,
+        personality="",
+    )
+    task = _make_task()
+    task.crew_member_id = "crew-1"
+    task.prompt = "do the thing"
+    captured = {}
+
+    class EmptyToolIndex:
+        def get_tools_for_query(self, query, k=8):
+            return set()
+
+    monkeypatch.setattr("src.tool_index.get_tool_index", lambda: EmptyToolIndex())
+
+    async def capture_agent_loop(*args, **kwargs):
+        captured["disabled_tools"] = kwargs.get("disabled_tools")
+        captured["relevant_tools"] = kwargs.get("relevant_tools")
+        return "done"
+
+    scheduler = TaskScheduler.__new__(TaskScheduler)
+    scheduler._session_manager = None
+    scheduler._run_agent_loop = capture_agent_loop
+
+    result = asyncio.run(scheduler._execute_llm_task(task, _SchedulerDbStub(crew)))
+
+    assert result == "done"
+    assert "bash" not in captured["disabled_tools"]
+    assert "bash" in captured["relevant_tools"]
